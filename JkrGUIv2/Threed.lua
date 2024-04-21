@@ -4,54 +4,6 @@ require "JkrGUIv2.Basic"
 ]============================================================]
 Jkrmt = {}
 
-Jkrmt.Camera3D = {
-    New = function(self)
-        local o = {}
-        setmetatable(o, self)
-        self.__index = self
-        o.mTarget = vec3(0)
-        o.mRight = vec3(0)
-        o.mEye = vec3(0)
-        o.mUp = vec3(0, 1, 0)
-        o.mCameraUp = vec3(0)
-        o.mDirection = vec3(0)
-        o.mFov = 0.45
-        o.mAspect = 16 / 9
-        o.mNearZ = 0.1
-        o.mFarZ = 100
-        o.mMatrix = Jmath.GetIdentityMatrix4x4()
-        return o
-    end,
-    SetAttributes = function(self, inTarget_3f, inEye_3f)
-        if inTarget_3f then self.mTarget = inTarget_3f end
-        if inEye_3f then self.mEye = inEye_3f end
-        self.mDirection = Jmath.Normalize(self.mTarget - self.mEye)
-        self.mRight = Jmath.Normalize(Jmath.Cross(self.mUp, self.mDirection))
-        self.mCameraUp = Jmath.Cross(self.mDirection, self.mRight)
-    end,
-    MoveForward = function(self, inFactor)
-        self.mEye = self.mEye + self.mDirection * inFactor
-    end,
-    MoveBackward = function(self, inFactor)
-        self.mEye = self.mEye - self.mDirection * inFactor
-    end,
-    MoveLeft = function(self, inFactor)
-        self.mEye = self.mEye - Jmath.Normalize(Jmath.Cross(self.mCameraUp, self.mDirection)) * inFactor
-    end,
-    MoveRight = function(self, inFactor)
-        self.mEye = self.mEye + Jmath.Normalize(Jmath.Cross(self.mCameraUp, self.mDirection)) * inFactor
-    end,
-    SetPerspective = function(self, inFov, inAspect, inNearZ, inFarZ)
-        if (inFov) then self.mFov = inFov end
-        if (inAspect) then self.mAspect = inAspect end
-        if (inNearZ) then self.mNearZ = inNearZ end
-        if (inFarZ) then self.mFarZ = inFarZ end
-
-        local lookat = Jmath.LookAt(self.mEye, self.mTarget, self.mCameraUp)
-        self.mMatrix = Jmath.Perspective(self.mFov, self.mAspect, self.mNearZ, self.mFarZ) * lookat
-    end
-}
-
 --[============================================================[
     GLTF Utils 3D
 ]============================================================]
