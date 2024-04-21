@@ -184,3 +184,52 @@ function Jkr.CreateShapesHelper(inS)
     end
     return o
 end
+
+--[============================================================[
+   3D World
+]============================================================]
+
+Jkrmt.World3D = {
+    New = function(self, i, w)
+        local o = {}
+        o.mCameras = {}
+        o.mCameraType = {}
+        o.mObjects = {}
+        o.mLights = {}
+        o.mShapeRenderer = Jkr.CreateShapeRenderer3D(i, w)
+        o.mSimple3DPipelines = {}
+        o.CurrentCamera = 0
+        setmetatable(o, self)
+        self.__index = self
+
+        self:AddCameraAuto(o, w, "PERSPECTIVE")
+        return o
+    end,
+    AddCameraAuto = function(self, inWindow, inCameraType)
+        local camera = Jkrmt.Camera3D:New()
+        camera:SetAttributes(vec3(0, 0, 0), vec3(10, 10, 10))
+        local dimension = inWindow:GetWindowDimension()
+        camera:SetPerspective(0.45, dimension.x / dimension.y, 0.1, 1000)
+        self.mCameras[#self.mCameras + 1] = camera
+        self.mCameraType[#self.mCameraType + 1] = inCameraType
+    end,
+    CreateDemoScene = function(self)
+        local Plane = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(100, 5, 100))
+        self.mObjects[#self.mObjects + 1] = self.mShapeRenderer:Add(Plane, vec3(0, 0, 0))
+    end,
+    DrawBackgrounds = function(self)
+        self.mShapeRenderer:Bind()
+    end,
+    DrawObjects = function(self)
+        self.mShapeRenderer:Bind()
+    end,
+    Event = function(self)
+
+    end,
+    Dispatch = function(self)
+
+    end,
+    Update = function(self)
+
+    end
+}

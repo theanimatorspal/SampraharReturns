@@ -25,23 +25,20 @@ CODING STANDARDS
 
 CREATING A FACTORY (CLASS PRODUCER)
 
-********** NOT USABLE IN MULTITHREADED ENVIRONMENT*********************
 Namespace.CreateCLASSNAME = function(inArgument1, inArgument2)
     local o = {}
     o.mArgument1 = inArgument1
-    local localVariable = inArgument2
+    o.Argument2 = inArgument2
 
     o.AFunction = function()
         -- What the function does
-        -- can use the localVariable as private member
     end
 
     return o
 end
 
-If you want to use your code in MultiThreaded environment
-Write your class as in Legacy methods (old method), See Threed.lua's Camera Class as
-and example.
-
+For Jkr Specific,
+If Supported for Multithreaded use Jkrmt
+If not use Jkr
 
 ]============================================================]
