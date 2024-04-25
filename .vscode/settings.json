@@ -1,5 +1,5 @@
 {
-          "workbench.colorTheme": "Quiet Light",
+          "workbench.colorTheme": "Red",
           "git.enableSmartCommit": true,
           "git.confirmSync": false,
           "gitlens.currentLine.enabled": false,
@@ -15,9 +15,12 @@
           "cmake.options.statusBarVisibility": "compact",
           "cmake.parallelJobs": 8,
           "cmake.clearOutputBeforeBuild": true,
+          "cmake.debugConfig": {
+                    "cwd": "C:\\Users\\sansk\\OneDrive\\Desktop\\SampraharReturns"
+          },
           /* EDITOR */
           "editor.matchBrackets": "near",
-          "editor.fontFamily": "Segoe Print",
+          "editor.fontFamily": "Cascadia Code",
           "editor.fontWeight": "normal",
           "editor.fontSize": 24,
           "editor.tabSize": 10,
@@ -27,7 +30,7 @@
                                         "scope": "keyword",
                                         "settings": {
                                                   "fontStyle": "italic",
-                                                  "foreground": "#80000f"
+                                                  "foreground": "#8850ff"
                                         }
                               },
                               {
@@ -79,6 +82,14 @@
                     "editor.suggest.insertMode": "replace",
                     "editor.semanticHighlighting.enabled": true,
           },
+          "[lua]": {
+                    "editor.quickSuggestions": {
+                              "comments": "inline",
+                              "other": "on",
+                              "strings": "on"
+                    },
+                    "editor.semanticHighlighting.enabled": true,
+          },
           "[log][Log]": {
                     "editor.fontSize": 13, // whatever value you want
                     "editor.fontFamily": "Consolas, 'Courier New', monospace"
@@ -95,5 +106,4 @@
           "notebook.output.fontSize": 10,
           "workbench.layoutControl.enabled": false,
           "workbench.panel.defaultLocation": "right",
-          "cmake.sourceDirectory": "C:/Users/sansk/OneDrive/Desktop/SampraharReturns/native",
 }
