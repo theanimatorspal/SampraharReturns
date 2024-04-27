@@ -11,6 +11,9 @@ Jkrmt = {}
 Jkrmt.GetPBRBasic_VertexShaderLayout = function()
     return [[
 
+#version 450
+#extension GL_EXT_debug_printf : enable
+
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inUV;
@@ -28,7 +31,116 @@ layout(set = 0, binding = 0) uniform UBO {
    mat4 proj;
    vec3 campos;
    vec4 lights[8];
+   mat4 shadowMatrix;
 } ubo;
+
+]]
+end
+
+Jkrmt.GetShadowMain = function()
+    return [[
+
+void GlslMain()
+{
+    gl_Position = ubo.proj * ubo.shadowMatrix * push.model * vec4(inPosition, 1.0);
+    gl_Position.y = -gl_Position.y;
+}
+
+   ]]
+end
+
+Jkrmt.GetBasicShadowVertexShaderMain = function()
+    return [[
+
+layout( location = 2 ) out vec3 vert_normal;
+layout( location = 3 ) out vec4 vert_shadowcoords;
+layout( location = 4 ) out vec3 vert_light;
+layout(location = 5) out vec3 vert_view;
+
+const mat4 bias = mat4(
+    0.5, 0.0, 0.0, 0.0,
+    0.0, 0.5, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.5, 0.5, 0.0, 1.0 );
+
+void GlslMain()
+{
+    vec4 pos = push.model * vec4(inPosition, 1.0);
+    gl_Position = ubo.proj * ubo.view * push.model * vec4(inPosition, 1.0);
+    gl_Position.y = -gl_Position.y;
+
+    vert_normal = mat3(push.model) * inNormal;
+    vert_light = normalize(ubo.lights[0].xyz - inPosition);
+    vert_view = -pos.xyz;
+    vert_shadowcoords = (bias * ubo.proj * ubo.shadowMatrix  * push.model) * vec4(inPosition.x, inPosition.y, inPosition.z, 1.0);
+    vUV = inUV;
+}
+
+]]
+end
+
+Jkrmt.GetBasicShadowFragmentShaderMain = function()
+    return [[
+
+#version 450
+#extension GL_EXT_debug_printf : enable
+
+layout (location = 0) in vec2 vUV;
+layout (location = 1) in vec3 vNormal;
+layout(location = 2) in vec3 vert_normal;
+layout(location = 3) in vec4 vert_shadowcoords;
+layout(location = 4) in vec3 vert_light;
+layout(location = 5) in vec3 vert_view;
+
+layout(set = 0, binding = 0) uniform UBO {
+   mat4 view;
+   mat4 proj;
+   vec3 campos;
+   vec4 lights[8];
+   mat4 shadowMatrix;
+} ubo;
+
+layout(set = 0, binding = 3) uniform sampler2D ShadowMap;
+
+layout( location = 0 ) out vec4 frag_color;
+
+#define ambient 0.1
+
+float LinearizeDepth(float depth)
+{
+  float n = 0.1; // TODO Add an entry on uniform
+  float f = 10000;
+  float z = depth;
+  return (2.0 * n) / (f + n - z * (f - n));	
+}
+
+float textureProj(vec4 shadowCoord, vec2 off)
+{
+	float shadow = 1.0;
+	if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 )
+	{
+		float dist = LinearizeDepth(texture( ShadowMap, shadowCoord.st + off ).r);
+		if ( shadowCoord.w > 0.0 && dist < shadowCoord.z )
+		{
+			shadow = ambient;
+		}
+	}
+	return shadow;
+}
+
+void GlslMain() {
+    vec4 shadowcoords_norm = vert_shadowcoords / vert_shadowcoords.w;
+    float shadow = textureProj(shadowcoords_norm, vec2(0.0));
+
+    vec3 N = normalize(vert_normal);
+	vec3 L = normalize(vert_light);
+	vec3 V = normalize(vert_view);
+	vec3 R = normalize(-reflect(L, N));
+
+	float diffuse = max(dot(N, L), ambient);
+    float sc = LinearizeDepth(texture(ShadowMap, vUV).r);
+	frag_color = vec4(vec3(diffuse * shadow), 1.0);
+}
 
 ]]
 end
@@ -66,6 +178,29 @@ void GlslMain()
 }
    ]]
 end
+
+Jkrmt.GetShadowSkinningMain = function()
+    return [[
+
+void GlslMain()
+{
+    vec4 jweight = inJointInfluence[gl_VertexIndex].mJointWeights;
+    vec4 jindex = inJointInfluence[gl_VertexIndex].mJointIndices;
+    mat4 skinMat  =
+            jweight.x * jointMatrixUBO.mJointMatrix[int(jindex.x)] +
+            jweight.y * jointMatrixUBO.mJointMatrix[int(jindex.y)] +
+            jweight.z * jointMatrixUBO.mJointMatrix[int(jindex.z)] +
+            jweight.w * jointMatrixUBO.mJointMatrix[int(jindex.w)];
+
+	gl_Position = ubo.proj * ubo.shadowMatrix * push.model * skinMat * vec4(inPosition, 1.0f);	
+    // gl_Position.y = -gl_Position.y; // TODO Understand I don't why it worked without this
+	vUV = inUV;
+	vNormal = inNormal;
+}
+
+   ]]
+end
+
 
 Jkrmt.GetBasic_FragmentShader = function()
     return [[
@@ -118,7 +253,6 @@ vec3 materialcolor()
 }
 
 // Normal Distribution Function
-
 float D_GGX(float dotNH, float roughness)
 {
     float alpha = roughness * roughness;
@@ -213,6 +347,7 @@ end
 
 Jkrmt.GetSkyboxVertexShader = function()
     return [[
+
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inUV;

@@ -2,9 +2,12 @@ require "JkrGUIv2.Basic"
 require "JkrGUIv2.Widgets"
 require "JkrGUIv2.Threed"
 require "JkrGUIv2.Multit"
+require "JkrGUIv2.ShaderFactory"
 
 local i = Jkr.CreateInstance()
 local w = Jkr.CreateWindow(i, "Samprahar Returns", vec2(900, 480))
+w:BuildShadowPass()
+
 local e = Jkr.CreateEventManager()
 local wid = Jkr.CreateWidgetRenderer(i, w)
 local mt = Jkr.MultiThreading(i)
@@ -15,6 +18,7 @@ local DefaultCamera = Jkr.Camera3D()
 DefaultCamera:SetAttributes(vec3(0, 0, 0), vec3(10, 10, 10))
 DefaultCamera:SetPerspective(0.30, 16 / 9, 0.1, 10000)
 world3d:AddCamera(DefaultCamera)
+world3d:AddLight3D(vec4(-10, 10, 10, 1), Jmath.Normalize(vec4(0, 0, 0, 0) - vec4(-10, 10, 10, 1)))
 
 Jkr.ConfigureMultiThreading(mt, {
           { "mtMt",           mt },
@@ -22,7 +26,7 @@ Jkr.ConfigureMultiThreading(mt, {
           { "mtW",            w },
           { "mtWorldShape3d", worldShape3d },
           { "mtSimple3d",     simple3d },
-          { "mtWorld3d",      world3d }
+          { "mtWorld3d",      world3d },
 })
 
 require("src.LoadResources")
@@ -38,6 +42,10 @@ local DrawToZero = function()
           mtW:SetDefaultScissor(0)
           mtWorld3d:DrawObjectsUniformed3D(mtW, 0)
           mtW:EndThreadCommandBuffer(0)
+end
+
+local ShadowPass = function()
+          world3d:DrawObjectsExplicit(w, world3d:GetExplicitShadowCastingObjects(), Jkr.CmdParam.None)
 end
 
 local MThreaded = function()
@@ -68,7 +76,49 @@ end
 local Dispatch = function()
           wid.Dispatch()
 end
-
-
 e:SetEventCallBack(Event)
-Jkr.DebugMainLoop(w, e, Update, Dispatch, Draw, nil, vec4(0, 0, 0, 1), mt, MThreaded, MExecute)
+
+local oldTime = 0.0
+local frameCount = 0
+while not e:ShouldQuit() do
+          oldTime = w:GetWindowCurrentTime()
+          e:ProcessEvents()
+
+          -- /* All Updates are done here*/
+          w:BeginUpdates()
+          Update()
+          WindowDimension = w:GetWindowDimension()
+          w:EndUpdates()
+
+          w:BeginDispatches()
+          Dispatch()
+          w:EndDispatches()
+
+          w:BeginShadowPass(0.5)
+          ShadowPass()
+          w:EndShadowPass()
+
+
+          MThreaded()
+          -- /* All UI Renders are Recordeed here*/
+          w:BeginUIs()
+          Draw()
+          w:EndUIs()
+
+          -- /* All ComputeShader Invocations are Done here*/
+
+          -- /* All Draws (Main CmdBuffer Recording) is done here*/
+          w:BeginDraws(0.1, 0.1, 0.1, 1, 1)
+          mt:Wait()
+          MExecute()
+          w:ExecuteUIs() -- The UI CmdBuffer is executed onto the main CmdBuffer
+          w:EndDraws()
+
+          -- /* Finally is presented onto the screen */
+          w:Present()
+          local delta = w:GetWindowCurrentTime() - oldTime
+          if (frameCount % 100 == 0) then
+                    w:SetTitle("FrameRate: " .. 1000 / delta)
+          end
+          frameCount = frameCount + 1
+end
