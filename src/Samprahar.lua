@@ -40,7 +40,8 @@ local DrawToZero = function()
           mtW:BeginThreadCommandBuffer(0)
           mtW:SetDefaultViewport(0)
           mtW:SetDefaultScissor(0)
-          mtWorld3d:DrawObjectsUniformed3D(mtW, 0)
+          --          mtWorld3d:DrawObjectsUniformed3D(mtW, 0)
+          mtWorld3d:DrawObjectsExplicit(mtW, mtWorld3d:GetExplicitObjects(), 0)
           mtW:EndThreadCommandBuffer(0)
 end
 

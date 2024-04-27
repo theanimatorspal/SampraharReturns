@@ -224,32 +224,32 @@ function LoadResources(mt)
             .NewLine().str
 
         -- Compile Shader 0
-        basic3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
-        basic3d = mtWorld3d:GetSimple3D(0)
+        local basic3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
+        local basic3d = mtWorld3d:GetSimple3D(0)
         basic3d:Compile(mtI, mtW, "res/cache/simple3d.glsl", Basic3dV, Basic3dF,
             mtGetDefaultResource("Simple3D", "Compute"), false)
 
         -- Compile Shader 1
-        CesiumSimple3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
-        mpbrbasic3d = mtWorld3d:GetSimple3D(CesiumSimple3dIndex)
-        CesiumGLTFModelIndex = mtWorld3d:AddGLTFModel("res/models/CesiumMan/CesiumMan.gltf")
-        GLTFModelCesium = mtWorld3d:GetGLTFModel(0)
-        CesiumId = mtWorldShape3d:Add(GLTFModelCesium)
-        VertexShader = Skinning3dV()
+        local CesiumSimple3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
+        local mpbrbasic3d = mtWorld3d:GetSimple3D(CesiumSimple3dIndex)
+        local CesiumGLTFModelIndex = mtWorld3d:AddGLTFModel("res/models/CesiumMan/CesiumMan.gltf")
+        local GLTFModelCesium = mtWorld3d:GetGLTFModel(0)
+        local CesiumId = mtWorldShape3d:Add(GLTFModelCesium)
+        local VertexShader = Skinning3dV()
         mpbrbasic3d:Compile(mtI, mtW, "res/cache/pbrbasic3d.glsl", VertexShader,
             PBRBasic3dFragment, mtGetDefaultResource("Simpl3D", "Compute"), false)
 
         --Compile Shader 2 (Skybox)
-        skyboxSimple3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
-        mSkybox3d = mtWorld3d:GetSimple3D(skyboxSimple3dIndex)
+        local skyboxSimple3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
+        local mSkybox3d = mtWorld3d:GetSimple3D(skyboxSimple3dIndex)
         mSkybox3d:SetPipelineContext(Jkr.PipelineContext.Skybox)
         mSkybox3d:Compile(mtI, mtW, "res/cache/skybox3d.glsl",
             Skybox3dV,
             Skybox3dF, mtGetDefaultResource("Simple3D", "Compute"), false)
 
         --Compile Shader 3 (Shadow)
-        shadowOffscreenSimple3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
-        shadowOffscreenSimple3d = mtWorld3d:GetSimple3D(shadowOffscreenSimple3dIndex)
+        local shadowOffscreenSimple3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
+        local shadowOffscreenSimple3d = mtWorld3d:GetSimple3D(shadowOffscreenSimple3dIndex)
         shadowOffscreenSimple3d:CompileForShadowOffscreen(
             mtI, mtW, "res/cache/shadowOffscreen3d.glsl",
             Skinning3dV("Shadow"),
@@ -257,8 +257,8 @@ function LoadResources(mt)
         )
 
         --Compile  Shader 4  (Shadowed)
-        shadowedSimple3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
-        shadowedSimple3d = mtWorld3d:GetSimple3D(shadowedSimple3dIndex)
+        local shadowedSimple3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
+        local shadowedSimple3d = mtWorld3d:GetSimple3D(shadowedSimple3dIndex)
         shadowedSimple3d:Compile(
             mtI, mtW, "res/cache/shadowed3d.glsl",
             Shadowed3dV,
@@ -266,41 +266,41 @@ function LoadResources(mt)
         )
 
         -- Global Uniform is at 0
-        GlobalUniformIndex = mtWorld3d:AddUniform3D(mtI)
-        GlobalUniform3d = mtWorld3d:GetUniform3D(GlobalUniformIndex)
+        local GlobalUniformIndex = mtWorld3d:AddUniform3D(mtI)
+        local GlobalUniform3d = mtWorld3d:GetUniform3D(GlobalUniformIndex)
         GlobalUniform3d:Build(mpbrbasic3d)
         mtWorld3d:AddWorldInfoToUniform3D(GlobalUniformIndex)
 
         -- Cesium Uniform is at 1
-        CesiumUniformIndex = mtWorld3d:AddUniform3D(mtI)
-        CesiumUniform = mtWorld3d:GetUniform3D(CesiumUniformIndex)
+        local CesiumUniformIndex = mtWorld3d:AddUniform3D(mtI)
+        local CesiumUniform = mtWorld3d:GetUniform3D(CesiumUniformIndex)
         CesiumUniform:Build(mpbrbasic3d)
         local WorldInfoBinding = 0 -- TODO Don't do this, make this auto // TODO Use a set
         GlobalUniform3d:AddUniformBufferToUniform3D(CesiumUniform, WorldInfoBinding)
 
         -- Skybox Uniform is at 2
-        skyboxUniformIndex = mtWorld3d:AddUniform3D(mtI)
-        skyboxUniform = mtWorld3d:GetUniform3D(skyboxUniformIndex)
+        local skyboxUniformIndex = mtWorld3d:AddUniform3D(mtI)
+        local skyboxUniform = mtWorld3d:GetUniform3D(skyboxUniformIndex)
         skyboxUniform:Build(mSkybox3d)
         mtWorld3d:AddSkyboxToUniform3D(mtI, "res/images/skybox/", skyboxUniformIndex)
         local WorldInfoBinding = 0 -- TODO Don't do this, make this auto // TODO use a set
         GlobalUniform3d:AddUniformBufferToUniform3D(skyboxUniform, WorldInfoBinding)
 
         -- Plane Uniform is at 3
-        planeUniformIndex = mtWorld3d:AddUniform3D(mtI)
-        planeUniform = mtWorld3d:GetUniform3D(planeUniformIndex)
+        local planeUniformIndex = mtWorld3d:AddUniform3D(mtI)
+        local planeUniform = mtWorld3d:GetUniform3D(planeUniformIndex)
         planeUniform:Build(basic3d)
         GlobalUniform3d:AddUniformBufferToUniform3D(planeUniform, WorldInfoBinding)
 
         -- Shadow Uniform is at 4
-        shadowUniformIndex = mtWorld3d:AddUniform3D(mtI)
-        shadowUniform = mtWorld3d:GetUniform3D(shadowUniformIndex)
+        local shadowUniformIndex = mtWorld3d:AddUniform3D(mtI)
+        local shadowUniform = mtWorld3d:GetUniform3D(shadowUniformIndex)
         shadowUniform:Build(shadowOffscreenSimple3d)
         GlobalUniform3d:AddUniformBufferToUniform3D(shadowUniform, WorldInfoBinding)
 
         -- Shadowed Uniform is at 5
-        shadowedUniformIndex = mtWorld3d:AddUniform3D(mtI)
-        shadowedUniform = mtWorld3d:GetUniform3D(shadowedUniformIndex)
+        local shadowedUniformIndex = mtWorld3d:AddUniform3D(mtI)
+        local shadowedUniform = mtWorld3d:GetUniform3D(shadowedUniformIndex)
         shadowedUniform:Build(shadowedSimple3d)
         GlobalUniform3d:AddUniformBufferToUniform3D(shadowedUniform, WorldInfoBinding)
         mtWorld3d:AddShadowMapToUniform3D(mtW, shadowedUniformIndex)
@@ -317,18 +317,21 @@ function LoadResources(mt)
         mtWorld3d:AddObject(CesiumId, CesiumGLTFModelIndex, CesiumUniformIndex,
             CesiumSimple3dIndex)
         -- =============================================================
-        mSkyboxCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
-        mSkyboxCubeId = mtWorldShape3d:Add(mSkyboxCube, vec3(0, 0, 0))
+        local mSkyboxCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
+        local mSkyboxCubeId = mtWorldShape3d:Add(mSkyboxCube, vec3(0, 0, 0))
         mtWorld3d:AddObject(mSkyboxCubeId, -1, skyboxUniformIndex, skyboxSimple3dIndex)
         -- =============================================================
-        mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(3, 0.01, 3))
-        mPlaneCubeId = mtWorldShape3d:Add(mPlaneCube, vec3(0, 0, 0))
+        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(3, 0.01, 3))
+        local mPlaneCubeId = mtWorldShape3d:Add(mPlaneCube, vec3(0, 0, 0))
         mtWorld3d:AddObject(mPlaneCubeId, -1, shadowedUniformIndex, shadowedSimple3dIndex)
         -- =============================================================
 
-        local NodeIndices = GLTFModelCesium:GetNodeIndexByMeshIndex(0)
-        mat = GLTFModelCesium:GetNodeMatrixByIndex(NodeIndices[1]) -- MeshIndex is std::vector<ui>
-        mtWorld3d:SetObjectMatrix(CesiumId, mat)
+        local NodeIndices    = GLTFModelCesium:GetNodeIndexByMeshIndex(0)
+        mat                  = GLTFModelCesium:GetNodeMatrixByIndex(NodeIndices[1]) -- MeshIndex is std::vector<ui>
+        local objects        = mtWorld3d:GetExplicitObjects()
+        local cesiumObject   = objects[1]
+        cesiumObject.mMatrix = GLTFModelCesium:GetNodeMatrixByIndex(NodeIndices[1])
+        --mtWorld3d:SetObjectMatrix(CesiumId, mat)
         CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
 
         local shadowCastingObjects = mtWorld3d:GetExplicitShadowCastingObjects()
