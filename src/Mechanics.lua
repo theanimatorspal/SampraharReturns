@@ -1,3 +1,4 @@
+Mechanics = {}
 MechanicsEvent = function(e, inWorld3d, inmt)
 
 end
@@ -28,18 +29,34 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
           local dX = math.sin(twoCosInvW)
           local dZ = math.cos(twoCosInvW)
 
-          if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_UP) then
+          Mechanics.MoveCesiumFront = function()
                     Uniform:UpdateByGLTFAnimation(Model, 0.1, 0)
                     cesiumObject.mTranslation = cesiumObject.mTranslation + vec3(dX, 0, dZ) * 0.1
           end
-          if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_DOWN) then
+
+          Mechanics.MoveCesiumBack = function()
                     Uniform:UpdateByGLTFAnimation(Model, -0.1, 0)
                     cesiumObject.mTranslation = cesiumObject.mTranslation - vec3(dX, 0, dZ) * 0.1
           end
-          if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_LEFT) then
+
+          Mechanics.RotateCesiumLeft = function()
                     cesiumObject.mRotation = cesiumObject.mRotation:Rotate_deg(10.0, vec3(0, 1, 0))
           end
-          if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_RIGHT) then
+
+          Mechanics.RotateCesiumRight = function()
                     cesiumObject.mRotation = cesiumObject.mRotation:Rotate_deg(-10.0, vec3(0, 1, 0))
+          end
+
+          if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_UP) then
+                    Mechanics.MoveCesiumFront()
+          end
+          if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_DOWN) then
+                    Mechanics.MoveCesiumBack()
+          end
+          if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_LEFT) then
+                    Mechanics.RotateCesiumLeft()
+          end
+          if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_RIGHT) then
+                    Mechanics.RotateCesiumRight()
           end
 end
