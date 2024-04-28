@@ -1,5 +1,5 @@
 require "JkrGUIv2.ShaderFactory"
-local Frame = 0
+local Frame = 1
 local CShader = Jkrmt.Shader()
     .Header(450)
     .CInvocationLayout(1, 1, 1)
@@ -34,28 +34,31 @@ UILoad = function(i, w, e)
           local Position = vec3(wid.WindowDimension.x / 2 - Dimension.x, wid.WindowDimension.y / 2 - Dimension.y, 50)
           local ComputeImage = wid.CreateComputeImage(Position, Dimension)
           local Painter = ComputeImage.CreatePainter("res/cache/UIbasic.glsl", CShader)
-          wid.c.PushOneTime(Jkr.CreateDispatchable(function()
+          ComputeImage.RegisterPainter(Painter)
+          wid.c.Push(Jkr.CreateDispatchable(function()
                     ComputeImage.BindPainter(Painter)
                     local PC = Jkr.DefaultCustomImagePainterPushConstant()
                     PC.x = vec4(0, 0, 50, 50)
                     PC.y = vec4(1, 0, 0, 1)
                     PC.z = vec4(0.8)
                     ComputeImage.DrawPainter(Painter, PC, 50, 50, 1)
-          end), Frame)
+                    ComputeImage.CopyToSampled()
+          end))
+          Frame = Frame + 1
 end
 
 UIDraw = function()
-
+          wid.Draw()
 end
 
 UIDispatch = function()
-
+          wid.Dispatch()
 end
 
 UIUpdate = function()
-
+          wid.Update()
 end
 
 UIEvent = function()
-
+          wid.Event()
 end
