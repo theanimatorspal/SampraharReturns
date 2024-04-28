@@ -89,12 +89,13 @@ Jkr.CreateCallExecutor = function(inCallBuffer)
     return o
 end
 
-Jkr.CreateWidgetRenderer = function(i, w)
+Jkr.CreateWidgetRenderer = function(i, w, e)
     local o = {}
     o.s = Jkr.CreateShapeRenderer(i, w)
     o.t = Jkr.CreateTextRendererBestTextAlt(i, o.s)
     o.c = Jkr.CreateCallBuffers()
     o.e = Jkr.CreateCallExecutor(o.c)
+    o.WindowDimension = w:GetWindowDimension()
 
     o.CreateFont = function(inFontFileName, inFontSize)
         local font = {}
@@ -108,7 +109,7 @@ Jkr.CreateWidgetRenderer = function(i, w)
         textLabel.mText = inText
         textLabel.mFont = inFont
         textLabel.mId = o.t:Add(inFont.mId, inPosition_3f, inText)
-        o.c.Push(Jkr.CreateDrawable(textLabel.mId, nil, "STATIC_TEXT", nil))
+        textLabel.PushId = o.c.Push(Jkr.CreateDrawable(textLabel.mId, nil, "TEXT", inColor))
 
         textLabel.Update = function(self, inPosition_3f, inDimension_3f, inFont, inText)
             if inFont then self.mFont = inFont end
@@ -117,9 +118,47 @@ Jkr.CreateWidgetRenderer = function(i, w)
         end
 
         textLabel.Remove = function(self)
-            -- TODO Remove function
+            -- TODO Implement Remove function
         end
         return textLabel
+    end
+
+    o.CreateComputeImage = function(inPosition_3f, inDimension_3f)
+        local Image = {}
+        Image.computeImage = Jkr.CreateCustomPainterImage(i, w, math.int(inDimension_3f.x), math.int(inDimension_3f.y))
+        Image.sampledImage = o.s:AddImage(inDimension_3f.x, inDimension_3f.y)
+        local Rectangle = Jkr.Generator(Jkr.Shapes.RectangleFill, uvec2(inDimension_3f.x, inDimension_3f.y))
+        Image.imageViewRect = o.s:Add(Rectangle, inPosition_3f)
+        Image.PushId = o.c.Push(Jkr.CreateDrawable(Image.imageViewRect, false, "IMAGE", Image.sampledImage,
+            vec4(1, 1, 1, 1)))
+
+        Image.CreatePainter = function(inCacheFileName, inComputeShaderString)
+            return Jkr.CreateCustomImagePainter(inCacheFileName, inComputeShaderString)
+        end
+        Image.BindPainter = function(inPainter)
+            inPainter:Bind(w, Jkr.CmdParam.None)
+            inPainter:BindImageFromImage(w, Image.computeImage, Jkr.CmdParam.None)
+        end
+        Image.DrawPainter = function(inPainter, inPushConstant, inX, inY, inZ)
+            inPainter:Draw(w, inPushConstant, inX, inY, inZ)
+        end
+        Image.CopyToSampled = function()
+            o.s:CopyToImage(Image.sampledImage, Image.computeImage)
+        end
+        return Image
+    end
+
+    o.CreateTextButton = function(inPosition_3f, inDimension_3f, inFont, inText, inTextColor, inBgColor)
+        local textButton = {}
+        textButton.mTextLabel = o.CreateTextLabel(inPosition_3f, inDimension_3f, inFont, inText, inTextColor)
+        local Rect = Jkr.Generator(Jkr.Shapes.RectangleFill, uvec2(inDimension_3f.x))
+        textButton.mId = o.s:Add(Rect)
+
+        textButton.Update = function(self, inPosition_3f, inDimension_3f, inFont, inText, inTextColor, inBgColor)
+            if (inFont) then textButton.mTextLabel.mFont = inFont end
+            if (inText) then textButton.mTextLabel.mText = inText end
+            -- TODO inTextColor and inBgColor
+        end
     end
 
     o.Update = function()
@@ -131,7 +170,7 @@ Jkr.CreateWidgetRenderer = function(i, w)
         -- Optimize this
         for i = 1, #o.c.mDrawables, 1 do
             local drawable = o.c.mDrawables[i]
-            if drawable.mDrawType == "STATIC_TEXT" then
+            if drawable.mDrawType == "TEXT" then
                 o.s:BindShapes(w)
                 o.s:BindFillMode(Jkr.FillType.Image, w, Jkr.CmdParam.UI)
                 o.t:Draw(drawable.mId, w, drawable.mColor, o.UIMatrix, Jkr.CmdParam.UI)

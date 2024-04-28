@@ -91,7 +91,7 @@
                     "editor.semanticHighlighting.enabled": true,
           },
           "[log][Log]": {
-                    "editor.fontSize": 13, // whatever value you want
+                    "editor.fontSize": 16, // whatever value you want
                     "editor.fontFamily": "Consolas, 'Courier New', monospace"
           },
           /* WORKBENCH */

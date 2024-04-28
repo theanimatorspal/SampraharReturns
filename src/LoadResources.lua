@@ -266,44 +266,42 @@ function LoadResources(mt)
         )
 
         -- Global Uniform is at 0
+
         local GlobalUniformIndex = mtWorld3d:AddUniform3D(mtI)
         local GlobalUniform3d = mtWorld3d:GetUniform3D(GlobalUniformIndex)
-        GlobalUniform3d:Build(mpbrbasic3d)
+        GlobalUniform3d:Build(basic3d)
         mtWorld3d:AddWorldInfoToUniform3D(GlobalUniformIndex)
+
 
         -- Cesium Uniform is at 1
         local CesiumUniformIndex = mtWorld3d:AddUniform3D(mtI)
         local CesiumUniform = mtWorld3d:GetUniform3D(CesiumUniformIndex)
         CesiumUniform:Build(mpbrbasic3d)
         local WorldInfoBinding = 0 -- TODO Don't do this, make this auto // TODO Use a set
-        GlobalUniform3d:AddUniformBufferToUniform3D(CesiumUniform, WorldInfoBinding)
+
 
         -- Skybox Uniform is at 2
         local skyboxUniformIndex = mtWorld3d:AddUniform3D(mtI)
         local skyboxUniform = mtWorld3d:GetUniform3D(skyboxUniformIndex)
         skyboxUniform:Build(mSkybox3d)
-        mtWorld3d:AddSkyboxToUniform3D(mtI, "res/images/skybox/", skyboxUniformIndex)
+        mtWorld3d:AddSkyboxToUniform3D(mtI, "res/images/skybox/", skyboxUniformIndex, 1)
         local WorldInfoBinding = 0 -- TODO Don't do this, make this auto // TODO use a set
-        GlobalUniform3d:AddUniformBufferToUniform3D(skyboxUniform, WorldInfoBinding)
 
         -- Plane Uniform is at 3
         local planeUniformIndex = mtWorld3d:AddUniform3D(mtI)
         local planeUniform = mtWorld3d:GetUniform3D(planeUniformIndex)
         planeUniform:Build(basic3d)
-        GlobalUniform3d:AddUniformBufferToUniform3D(planeUniform, WorldInfoBinding)
 
         -- Shadow Uniform is at 4
         local shadowUniformIndex = mtWorld3d:AddUniform3D(mtI)
         local shadowUniform = mtWorld3d:GetUniform3D(shadowUniformIndex)
         shadowUniform:Build(shadowOffscreenSimple3d)
-        GlobalUniform3d:AddUniformBufferToUniform3D(shadowUniform, WorldInfoBinding)
 
         -- Shadowed Uniform is at 5
         local shadowedUniformIndex = mtWorld3d:AddUniform3D(mtI)
         local shadowedUniform = mtWorld3d:GetUniform3D(shadowedUniformIndex)
         shadowedUniform:Build(shadowedSimple3d)
-        GlobalUniform3d:AddUniformBufferToUniform3D(shadowedUniform, WorldInfoBinding)
-        mtWorld3d:AddShadowMapToUniform3D(mtW, shadowedUniformIndex)
+        mtWorld3d:AddShadowMapToUniform3D(mtW, shadowedUniformIndex, 1)
 
         mpbrbasic3d = mtWorld3d:GetSimple3D(CesiumSimple3dIndex)
         CesiumUniform = mtWorld3d:GetUniform3D(CesiumUniformIndex)
@@ -311,7 +309,7 @@ function LoadResources(mt)
         local loadImages = true
         -- COPY Uniform from a GlTF
         CesiumUniform:Build(mpbrbasic3d, GLTFModelCesium, 0, loadSkin, loadImages)
-        CesiumUniform:AddBindingsToUniform3DGLTF(shadowUniform, loadSkin, not loadImages)
+        CesiumUniform:AddBindingsToUniform3DGLTF(shadowUniform, loadSkin, not loadImages, 1)
 
         -- =============================================================
         mtWorld3d:AddObject(CesiumId, CesiumGLTFModelIndex, CesiumUniformIndex,
