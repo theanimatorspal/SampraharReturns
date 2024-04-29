@@ -236,9 +236,6 @@ function LoadResources(mt, inWorld3d)
         -- Compile Shader 1
         local CesiumSimple3dIndex = mtWorld3d:AddSimple3D(mtI, mtW)
         local mpbrbasic3d = mtWorld3d:GetSimple3D(CesiumSimple3dIndex)
-        local CesiumGLTFModelIndex = mtWorld3d:AddGLTFModel("res/models/CesiumMan/CesiumMan.gltf")
-        local GLTFModelCesium = mtWorld3d:GetGLTFModel(0)
-        local CesiumId = mtWorldShape3d:Add(GLTFModelCesium)
         local VertexShader = Skinning3dV()
         mpbrbasic3d:Compile(mtI, mtW, "res/cache/pbrbasic3d.glsl", VertexShader,
             PBRBasic3dFragment, mtGetDefaultResource("Simpl3D", "Compute"), false)
@@ -307,41 +304,52 @@ function LoadResources(mt, inWorld3d)
         CesiumUniform = mtWorld3d:GetUniform3D(CesiumUniformIndex)
         local loadSkin = true
         local loadImages = true
-        -- COPY Uniform from a GlTF
-        CesiumUniform:Build(mpbrbasic3d, GLTFModelCesium, 0, loadSkin, loadImages)
-        CesiumUniform:AddBindingsToUniform3DGLTF(shadowUniform, loadSkin, not loadImages, 1)
 
-        -- =============================================================
-        mtWorld3d:AddObject(CesiumId, CesiumGLTFModelIndex, CesiumUniformIndex,
-            CesiumSimple3dIndex)
-        -- =============================================================
-        local mSkyboxCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
-        local mSkyboxCubeId = mtWorldShape3d:Add(mSkyboxCube, vec3(0, 0, 0))
-        mtWorld3d:AddObject(mSkyboxCubeId, -1, skyboxUniformIndex, skyboxSimple3dIndex)
-        -- =============================================================
-        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(3, 0.01, 3))
-        local mPlaneCubeId = mtWorldShape3d:Add(mPlaneCube, vec3(0, 0, 0))
-        mtWorld3d:AddObject(mPlaneCubeId, -1, shadowedUniformIndex, shadowedSimple3dIndex)
-        -- =============================================================
+        -- -- =============================================================
+        -- mtWorld3d:AddObject(CesiumId, CesiumGLTFModelIndex, CesiumUniformIndex,
+        --     CesiumSimple3dIndex)
+        -- -- =============================================================
+        -- mtWorld3d:AddObject(mSkyboxCubeId, -1, skyboxUniformIndex, skyboxSimple3dIndex)
+        -- -- =============================================================
+        -- mtWorld3d:AddObject(mPlaneCubeId, -1, shadowedUniformIndex, shadowedSimple3dIndex)
+        -- -- =============================================================
 
-        local NodeIndices    = GLTFModelCesium:GetNodeIndexByMeshIndex(0)
-        local objects        = mtWorld3d:GetExplicitObjects()
-        local cesiumObject   = objects[1]
-        cesiumObject.mMatrix = GLTFModelCesium:GetNodeMatrixByIndex(NodeIndices[1])
-        CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
+        -- local NodeIndices    = GLTFModelCesium:GetNodeIndexByMeshIndex(0)
+        -- local objects        = mtWorld3d:GetExplicitObjects()
+        -- local cesiumObject   = objects[1]
+        -- cesiumObject.mMatrix = GLTFModelCesium:GetNodeMatrixByIndex(NodeIndices[1])
+        -- CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
 
         function AddOpaqueObject(inId, inAssociatedModel, inUniformIndex, inSimple3dIndex)
             local Object = Jkr.Object3D()
-            Object.mId = CesiumId
+            Object.mId = inId
             Object.mAssociatedModel = inAssociatedModel
             Object.mAssociatedUniform = inUniformIndex
             Object.mAssociatedSimple3D = inSimple3dIndex
             OpaqueObjects:add(Object)
         end
 
+        -- local CesiumGLTFModelIndex = mtWorld3d:AddGLTFModel("res/models/CesiumMan/CesiumMan.gltf")
+        local CesiumGLTFModelIndex = mtWorld3d:AddGLTFModel("res/models/CesiumManBlend/CesiumMan.gltf")
+        local GLTFModelCesium = mtWorld3d:GetGLTFModel(CesiumGLTFModelIndex)
+        local CesiumId = mtWorldShape3d:Add(GLTFModelCesium)
+        -- COPY Uniform from a GlTF
+        CesiumUniform:Build(mpbrbasic3d, GLTFModelCesium, 0, loadSkin, loadImages)
+        CesiumUniform:AddBindingsToUniform3DGLTF(shadowUniform, loadSkin, not loadImages, 1)
+
+        local mSkyboxCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
+        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(3, 0.01, 3))
+        local mSkyboxCubeId = mtWorldShape3d:Add(mSkyboxCube, vec3(0, 0, 0))
+        local mPlaneCubeId = mtWorldShape3d:Add(mPlaneCube, vec3(0, 0, 0))
         AddOpaqueObject(CesiumId, CesiumGLTFModelIndex, CesiumUniformIndex, CesiumSimple3dIndex)
         AddOpaqueObject(mSkyboxCubeId, -1, skyboxUniformIndex, skyboxSimple3dIndex)
         AddOpaqueObject(mPlaneCubeId, -1, shadowedUniformIndex, shadowedSimple3dIndex)
+        local NodeIndices        = GLTFModelCesium:GetNodeIndexByMeshIndex(0)
+        --local objects            = mtWorld3d:GetExplicitObjects()
+        OpaqueObjects[1].mMatrix = GLTFModelCesium:GetNodeMatrixByIndex(NodeIndices[1])
+        CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
+
+        Jmath.PrintMatrix(OpaqueObjects[1].mMatrix)
         mtMt:Inject("OpaqueObjects", OpaqueObjects)
 
         function ConfigureShadowCastingObjects()
@@ -350,12 +358,13 @@ function LoadResources(mt, inWorld3d)
             Object.mAssociatedModel = -1
             Object.mAssociatedUniform = shadowUniformIndex
             Object.mAssociatedSimple3D = shadowOffscreenSimple3dIndex
+            Object.mMatrix = OpaqueObjects[1].mMatrix
             ShadowCastingObjects:add(Object)
             mtMt:Inject("ShadowCastingObjects", ShadowCastingObjects)
         end
 
         ConfigureShadowCastingObjects()
-        mtMt:Inject("CesiumId", CesiumId)
+        mtMt:Inject("CesiumId", 0)
     end
     mt:AddJobF(Compile1)
 end

@@ -3,13 +3,13 @@ MechanicsEvent = function(e, inWorld3d, inmt)
 
 end
 
+local CurrentBlendFactor = 0
 MechanicsUpdate = function(e, inWorld3d, inmt)
-          local Model = inWorld3d:GetGLTFModel(0)
+          local CesiumModelGLTF = inWorld3d:GetGLTFModel(0)
           local Uniform = inWorld3d:GetUniform3D(1)
           local cesiumId = inmt:Get("CesiumId")
-          local objects = inWorld3d:GetExplicitObjects()
-          local cesiumObject = objects[cesiumId + 1]
-          local cesiumCurrentRotation = cesiumObject.mRotation
+          local objects = inmt:Get("OpaqueObjects")
+          local cesiumObject = objects[1]
           local rX = cesiumObject.mRotation.x
           local rY = cesiumObject.mRotation.y
           local rZ = cesiumObject.mRotation.z
@@ -30,14 +30,33 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
           local dX = math.sin(twoCosInvW)
           local dZ = math.cos(twoCosInvW)
 
+          local WalkAnimationIndex = 0
+          local StillAnimationIndex = 1
+          if CurrentBlendFactor < 1.0 then
+                    CurrentBlendFactor = CurrentBlendFactor + 0.1
+          elseif CurrentBlendFactor > 1.0 then
+                    CurrentBlendFactor = 1.0
+          end
           Mechanics.MoveCesiumFront = function()
-                    Uniform:UpdateByGLTFAnimation(Model, 0.1, 0)
+                    CesiumModelGLTF:BlendCombineAnimation(0.1, WalkAnimationIndex, StillAnimationIndex,
+                              CurrentBlendFactor, true)
                     cesiumObject.mTranslation = cesiumObject.mTranslation + vec3(dX, 0, dZ) * 0.1
+                    if CurrentBlendFactor > 0 then
+                              CurrentBlendFactor = CurrentBlendFactor - 0.2
+                    elseif CurrentBlendFactor < 0 then
+                              CurrentBlendFactor = 0
+                    end
           end
 
           Mechanics.MoveCesiumBack = function()
-                    Uniform:UpdateByGLTFAnimation(Model, -0.1, 0)
+                    CesiumModelGLTF:BlendCombineAnimation(0.1, WalkAnimationIndex, StillAnimationIndex,
+                              CurrentBlendFactor, true)
                     cesiumObject.mTranslation = cesiumObject.mTranslation - vec3(dX, 0, dZ) * 0.1
+                    if CurrentBlendFactor > 0 then
+                              CurrentBlendFactor = CurrentBlendFactor - 0.2
+                    elseif CurrentBlendFactor < 0 then
+                              CurrentBlendFactor = 0
+                    end
           end
 
           Mechanics.RotateCesiumLeft = function()
@@ -60,4 +79,19 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
           if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_RIGHT) then
                     Mechanics.RotateCesiumRight()
           end
+          local i = 0
+          if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_SPACE) then
+                    CesiumModelGLTF:BlendCombineAnimationByOffset(0.00, WalkAnimationIndex, 0.3, StillAnimationIndex,
+                              1, true)
+                    i = i + 0.001
+          end
+
+          CesiumModelGLTF:BlendCombineAnimation(0.01, WalkAnimationIndex, StillAnimationIndex,
+                    CurrentBlendFactor, true)
+          Uniform:UpdateByGLTFAnimation(CesiumModelGLTF)
+          local ShadowCastingObjects = inmt:Get("ShadowCastingObjects")
+          ShadowCastingObjects[1].mTranslation = cesiumObject.mTranslation
+          ShadowCastingObjects[1].mRotation = cesiumObject.mRotation
+          ShadowCastingObjects[1].mScale = cesiumObject.mScale
+          ShadowCastingObjects[1].mMatrix = cesiumObject.mMatrix
 end

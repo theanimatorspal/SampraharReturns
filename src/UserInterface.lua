@@ -1,5 +1,5 @@
 require "JkrGUIv2.ShaderFactory"
-local Frame = 1
+local ButtonComputeFrame = 1
 local CShader = Jkrmt.Shader()
     .Header(450)
     .CInvocationLayout(1, 1, 1)
@@ -47,7 +47,7 @@ UILoad = function(i, w, e)
                 PC.z = vec4(0.0)
                 ComputeImage.DrawPainter(Painter, PC, math.int(Dimension.x), math.int(Dimension.y), 1)
                 ComputeImage.CopyToSampled()
-            end), Frame)
+            end), ButtonComputeFrame)
             local Button = ComputeImage.CreateButton(Position, Dimension, function()
                 inFunction()
             end)
@@ -63,7 +63,7 @@ UILoad = function(i, w, e)
         CreateButton(0.2, 0.7, function() Mechanics.RotateCesiumLeft() end)
         CreateButton(0.4, 0.7, function() Mechanics.RotateCesiumRight() end)
         CreateButton(0.3, 0.8, function() Mechanics.MoveCesiumBack() end)
-        Frame = Frame + 1
+        ButtonComputeFrame = ButtonComputeFrame + 1
     end
 end
 
