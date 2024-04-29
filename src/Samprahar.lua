@@ -18,32 +18,32 @@ world3d:AddCamera(DefaultCamera)
 world3d:AddLight3D(vec4(-10, 10, 10, 1), Jmath.Normalize(vec4(0, 0, 0, 0) - vec4(-10, 10, 10, 1)))
 
 Jkr.ConfigureMultiThreading(mt, {
+          { "mt",             mt },
           { "mtMt",           mt },
           { "mtI",            i },
           { "mtW",            w },
           { "mtWorldShape3d", worldShape3d },
           { "mtWorld3d",      world3d },
+          { "world3d",        world3d },
 })
 require("src.LoadResources")
-LoadResources(mt)
-mt:Wait()
+LoadResources(mt, world3d)
 require("src.Mechanics")
 require("src.UserInterface")
-
 UILoad(i, w, e)
+mt:Wait()
 
 
 local DrawToZero = function()
           mtW:BeginThreadCommandBuffer(0)
           mtW:SetDefaultViewport(0)
           mtW:SetDefaultScissor(0)
-          --mtWorld3d:DrawObjectsUniformed3D(mtW, 0)
-          mtWorld3d:DrawObjectsExplicit(mtW, mtWorld3d:GetExplicitObjects(), 0)
+          mtWorld3d:DrawObjectsExplicit(mtW, OpaqueObjects, 0)
           mtW:EndThreadCommandBuffer(0)
 end
 
 local ShadowPass = function()
-          world3d:DrawObjectsExplicit(w, world3d:GetExplicitShadowCastingObjects(), Jkr.CmdParam.None)
+          world3d:DrawObjectsExplicit(w, ShadowCastingObjects, Jkr.CmdParam.None)
 end
 
 local MThreaded = function()

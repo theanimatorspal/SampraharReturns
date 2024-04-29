@@ -29,54 +29,56 @@ local CShader = Jkrmt.Shader()
 
 local wid = {}
 UILoad = function(i, w, e)
-          wid = Jkr.CreateWidgetRenderer(i, w, e)
-          local Painter = Jkr.CreateCustomImagePainter("res/cache/UIbasic.glsl", CShader)
-          Painter:Store(i, w)
-          local CreateButton = function(x, y, inFunction)
-                    local Dimension = vec3(wid.WindowDimension.x / 10, wid.WindowDimension.y / 10, 1)
-                    local Position = vec3(wid.WindowDimension.x * x - Dimension.x,
-                              wid.WindowDimension.y * y - Dimension.y, 50)
-                    local ComputeImage = wid.CreateComputeImage(Position, Dimension)
-                    ComputeImage.RegisterPainter(Painter)
-                    wid.c.PushOneTime(Jkr.CreateDispatchable(function()
-                              ComputeImage.BindPainter(Painter)
-                              local PC = Jkr.DefaultCustomImagePainterPushConstant()
-                              PC.x = vec4(0, 0, 0.8, 0.8)
-                              PC.y = vec4(1, 0, 0, 0.8)
-                              PC.z = vec4(0.0)
-                              ComputeImage.DrawPainter(Painter, PC, math.int(Dimension.x), math.int(Dimension.y), 1)
-                              ComputeImage.CopyToSampled()
-                    end), Frame)
-                    local Button = ComputeImage.CreateButton(Position, Dimension, function()
-                              inFunction()
-                    end)
-                    -- TODO space thichesi garne bana
-                    wid.c.Push(Jkr.CreateUpdatable(function()
-                              local Dimension = vec3(wid.WindowDimension.x / 10, wid.WindowDimension.y / 10, 1)
-                              local Position = vec3(wid.WindowDimension.x * x - Dimension.x,
-                                        wid.WindowDimension.y * y - Dimension.y, 50)
-                              Button.Update(Position, Dimension)
-                    end))
-          end
-          CreateButton(0.3, 0.6, function() Mechanics.MoveCesiumFront() end)
-          CreateButton(0.2, 0.7, function() Mechanics.RotateCesiumLeft() end)
-          CreateButton(0.4, 0.7, function() Mechanics.RotateCesiumRight() end)
-          CreateButton(0.3, 0.8, function() Mechanics.MoveCesiumBack() end)
-          Frame = Frame + 1
+    wid = Jkr.CreateWidgetRenderer(i, w, e)
+    if (true) then
+        local Painter = Jkr.CreateCustomImagePainter("res/cache/UIbasic.glsl", CShader)
+        Painter:Store(i, w)
+        local CreateButton = function(x, y, inFunction)
+            local Dimension = vec3(wid.WindowDimension.x / 10, wid.WindowDimension.y / 10, 1)
+            local Position = vec3(wid.WindowDimension.x * x - Dimension.x,
+                wid.WindowDimension.y * y - Dimension.y, 50)
+            local ComputeImage = wid.CreateComputeImage(Position, Dimension)
+            ComputeImage.RegisterPainter(Painter)
+            wid.c.PushOneTime(Jkr.CreateDispatchable(function()
+                ComputeImage.BindPainter(Painter)
+                local PC = Jkr.DefaultCustomImagePainterPushConstant()
+                PC.x = vec4(0, 0, 0.8, 0.8)
+                PC.y = vec4(1, 0, 0, 0.8)
+                PC.z = vec4(0.0)
+                ComputeImage.DrawPainter(Painter, PC, math.int(Dimension.x), math.int(Dimension.y), 1)
+                ComputeImage.CopyToSampled()
+            end), Frame)
+            local Button = ComputeImage.CreateButton(Position, Dimension, function()
+                inFunction()
+            end)
+            -- TODO space thichesi garne bana
+            wid.c.Push(Jkr.CreateUpdatable(function()
+                local Dimension = vec3(wid.WindowDimension.x / 10, wid.WindowDimension.y / 10, 1)
+                local Position = vec3(wid.WindowDimension.x * x - Dimension.x,
+                    wid.WindowDimension.y * y - Dimension.y, 50)
+                Button.Update(Position, Dimension)
+            end))
+        end
+        CreateButton(0.3, 0.6, function() Mechanics.MoveCesiumFront() end)
+        CreateButton(0.2, 0.7, function() Mechanics.RotateCesiumLeft() end)
+        CreateButton(0.4, 0.7, function() Mechanics.RotateCesiumRight() end)
+        CreateButton(0.3, 0.8, function() Mechanics.MoveCesiumBack() end)
+        Frame = Frame + 1
+    end
 end
 
 UIDraw = function()
-          wid.Draw()
+    wid.Draw()
 end
 
 UIDispatch = function()
-          wid.Dispatch()
+    wid.Dispatch()
 end
 
 UIUpdate = function()
-          wid.Update()
+    wid.Update()
 end
 
 UIEvent = function()
-          wid.Event()
+    wid.Event()
 end

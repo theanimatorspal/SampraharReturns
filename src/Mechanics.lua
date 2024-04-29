@@ -25,6 +25,7 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
           if (rY < 0) then
                     CosInvW = 2 * math.pi - CosInvW
           end
+
           local twoCosInvW = 2 * CosInvW
           local dX = math.sin(twoCosInvW)
           local dZ = math.cos(twoCosInvW)

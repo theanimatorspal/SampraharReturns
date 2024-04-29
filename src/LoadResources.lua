@@ -1,4 +1,8 @@
-function LoadResources(mt)
+function LoadResources(mt, inWorld3d)
+    OpaqueObjects = inWorld3d:MakeExplicitObjectsVector()
+    ShadowCastingObjects = inWorld3d:MakeExplicitObjectsVector()
+    mt:Inject("OpaqueObjects", OpaqueObjects)
+    mt:Inject("ShadowCastingObjects", ShadowCastingObjects)
     local function Compile1()
         local Basic3dV = Jkrmt.Shader()
             .Header(450)
@@ -90,7 +94,7 @@ function LoadResources(mt)
                 return s.Append([[
                     gl_Position = Ubo.proj * Ubo.view * Push.model * skinMat * vec4(inPosition, 1.0f);
                     vUV = inUV;
-                    vNormal = inNormal;
+                    vNormal = vec3(Push.model) * inNormal;
                 ]])
                     .InvertY()
                     .NewLine()
@@ -208,7 +212,7 @@ function LoadResources(mt)
             .Append([[
                 vec3 N = normalize(vNormal);
                 vec3 V = normalize(Ubo.campos - vec3(0, 0, 0)); // TODO Ubo.campos - PositioninWorld
-                float roughness = 0.8; // TODO Use that shit
+                float roughness = 0.1; // TODO Use that shit
                 // Specular Contribution
                 vec3 Lo = vec3(0.0);
                 vec3 L = normalize(vec3(Ubo.lights[0]) - vec3(0, 0, 0)); // in World ko position
@@ -272,20 +276,16 @@ function LoadResources(mt)
         GlobalUniform3d:Build(basic3d)
         mtWorld3d:AddWorldInfoToUniform3D(GlobalUniformIndex)
 
-
         -- Cesium Uniform is at 1
         local CesiumUniformIndex = mtWorld3d:AddUniform3D(mtI)
         local CesiumUniform = mtWorld3d:GetUniform3D(CesiumUniformIndex)
         CesiumUniform:Build(mpbrbasic3d)
-        local WorldInfoBinding = 0 -- TODO Don't do this, make this auto // TODO Use a set
-
 
         -- Skybox Uniform is at 2
         local skyboxUniformIndex = mtWorld3d:AddUniform3D(mtI)
         local skyboxUniform = mtWorld3d:GetUniform3D(skyboxUniformIndex)
         skyboxUniform:Build(mSkybox3d)
         mtWorld3d:AddSkyboxToUniform3D(mtI, "res/images/skybox/", skyboxUniformIndex, 1)
-        local WorldInfoBinding = 0 -- TODO Don't do this, make this auto // TODO use a set
 
         -- Plane Uniform is at 3
         local planeUniformIndex = mtWorld3d:AddUniform3D(mtI)
@@ -325,20 +325,36 @@ function LoadResources(mt)
         -- =============================================================
 
         local NodeIndices    = GLTFModelCesium:GetNodeIndexByMeshIndex(0)
-        mat                  = GLTFModelCesium:GetNodeMatrixByIndex(NodeIndices[1]) -- MeshIndex is std::vector<ui>
         local objects        = mtWorld3d:GetExplicitObjects()
         local cesiumObject   = objects[1]
         cesiumObject.mMatrix = GLTFModelCesium:GetNodeMatrixByIndex(NodeIndices[1])
-        --mtWorld3d:SetObjectMatrix(CesiumId, mat)
         CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
 
-        local shadowCastingObjects = mtWorld3d:GetExplicitShadowCastingObjects()
-        local Object = Jkr.Object3D()
-        Object.mId = CesiumId
-        Object.mAssociatedModel = -1
-        Object.mAssociatedUniform = shadowUniformIndex
-        Object.mAssociatedSimple3D = shadowOffscreenSimple3dIndex
-        shadowCastingObjects:add(Object)
+        function AddOpaqueObject(inId, inAssociatedModel, inUniformIndex, inSimple3dIndex)
+            local Object = Jkr.Object3D()
+            Object.mId = CesiumId
+            Object.mAssociatedModel = inAssociatedModel
+            Object.mAssociatedUniform = inUniformIndex
+            Object.mAssociatedSimple3D = inSimple3dIndex
+            OpaqueObjects:add(Object)
+        end
+
+        AddOpaqueObject(CesiumId, CesiumGLTFModelIndex, CesiumUniformIndex, CesiumSimple3dIndex)
+        AddOpaqueObject(mSkyboxCubeId, -1, skyboxUniformIndex, skyboxSimple3dIndex)
+        AddOpaqueObject(mPlaneCubeId, -1, shadowedUniformIndex, shadowedSimple3dIndex)
+        mtMt:Inject("OpaqueObjects", OpaqueObjects)
+
+        function ConfigureShadowCastingObjects()
+            local Object = Jkr.Object3D()
+            Object.mId = CesiumId
+            Object.mAssociatedModel = -1
+            Object.mAssociatedUniform = shadowUniformIndex
+            Object.mAssociatedSimple3D = shadowOffscreenSimple3dIndex
+            ShadowCastingObjects:add(Object)
+            mtMt:Inject("ShadowCastingObjects", ShadowCastingObjects)
+        end
+
+        ConfigureShadowCastingObjects()
         mtMt:Inject("CesiumId", CesiumId)
     end
     mt:AddJobF(Compile1)
