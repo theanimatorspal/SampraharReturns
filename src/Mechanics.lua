@@ -79,12 +79,6 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
           if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_RIGHT) then
                     Mechanics.RotateCesiumRight()
           end
-          local i = 0
-          if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_SPACE) then
-                    CesiumModelGLTF:BlendCombineAnimationByOffset(0.00, WalkAnimationIndex, 0.3, StillAnimationIndex,
-                              1, true)
-                    i = i + 0.001
-          end
 
           CesiumModelGLTF:BlendCombineAnimation(0.01, WalkAnimationIndex, StillAnimationIndex,
                     CurrentBlendFactor, true)

@@ -15,23 +15,26 @@ local DefaultCamera = Jkr.Camera3D()
 DefaultCamera:SetAttributes(vec3(0, 0, 0), vec3(10, 10, 10))
 DefaultCamera:SetPerspective(0.30, 16 / 9, 0.1, 10000)
 world3d:AddCamera(DefaultCamera)
-world3d:AddLight3D(vec4(-10, 10, 10, 1), Jmath.Normalize(vec4(0, 0, 0, 0) - vec4(-10, 10, 10, 1)))
+world3d:AddLight3D(vec4(10, 10, -10, 1), Jmath.Normalize(vec4(0, 0, 0, 0) - vec4(10, 10, -10, 1)))
 
 Jkr.ConfigureMultiThreading(mt, {
           { "mt",             mt },
           { "mtMt",           mt },
+          { "i",              i },
           { "mtI",            i },
+          { "w",              w },
           { "mtW",            w },
           { "mtWorldShape3d", worldShape3d },
+          { "worldShape3d",   worldShape3d },
           { "mtWorld3d",      world3d },
           { "world3d",        world3d },
 })
+mt:Wait()
 require("src.LoadResources")
 LoadResources(mt, world3d)
 require("src.Mechanics")
 require("src.UserInterface")
 UILoad(i, w, e)
-mt:Wait()
 
 
 local DrawToZero = function()
@@ -66,6 +69,7 @@ local Event = function()
 end
 
 local Update = function()
+          mt:Wait()
           UIUpdate()
           world3d:Update(e)
           MechanicsUpdate(e, world3d, mt)

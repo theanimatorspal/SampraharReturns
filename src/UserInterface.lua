@@ -30,7 +30,7 @@ local CShader = Jkrmt.Shader()
 local wid = {}
 UILoad = function(i, w, e)
     wid = Jkr.CreateWidgetRenderer(i, w, e)
-    if (true) then
+    if (ANDROID) then
         local Painter = Jkr.CreateCustomImagePainter("res/cache/UIbasic.glsl", CShader)
         Painter:Store(i, w)
         local CreateButton = function(x, y, inFunction)
