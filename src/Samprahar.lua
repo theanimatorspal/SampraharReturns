@@ -70,7 +70,7 @@ end
 
 local Update = function()
           mt:Wait()
-          UIUpdate()
+          UIUpdate(mt)
           world3d:Update(e)
           MechanicsUpdate(e, world3d, mt)
 end

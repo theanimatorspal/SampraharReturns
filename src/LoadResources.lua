@@ -1,4 +1,50 @@
 Resourcesmt = {}
+function Resourcesmt.LoadFlightHelmet()
+    --[================================[
+            GLTF Loading PBR
+        ]================================]
+    local FlightHelmentGLTFModelIndex = world3d:AddGLTFModel("res/models/FlightHelmet/FlightHelmet.gltf")
+    local GLTFModelFlightHelment = world3d:GetGLTFModel(FlightHelmentGLTFModelIndex)
+    local FlightHelmentId = worldShape3d:Add(GLTFModelFlightHelment)
+    local MaterialToSimple3DMap = {}
+    for x = 1, #GLTFModelFlightHelment:GetMaterialsRef(), 1 do
+        local Shaders = Jkrmt.CreateShaderByGLTFMaterial(GLTFModelFlightHelment, x)
+        local Simple3DIndex = world3d:AddSimple3D(i, w)
+        local Simple3D = world3d:GetSimple3D(Simple3DIndex)
+        Simple3D:Compile(
+            i, w, "res/cache/FlightHelmetShader" .. x .. ".glsl",
+            Shaders.vShader,
+            Shaders.fShader, mtGetDefaultResource("Simple3D", "Compute"), false
+        )
+        MaterialToSimple3DMap[x] = Simple3DIndex
+    end
+
+    local FlightObject3Ds = {}
+    local Meshes = GLTFModelFlightHelment:GetMeshesRef()
+    for x = 1, #Meshes, 1 do
+        local primitives = Meshes[x].mPrimitives
+        for y = 1, #primitives, 1 do
+            local object3d = Jkrmt.CreateObjectByGLTFPrimitiveAndUniform(
+                world3d,
+                FlightHelmentGLTFModelIndex,
+                FlightHelmentId,
+                MaterialToSimple3DMap,
+                x,
+                primitives[y]
+            )
+            FlightObject3Ds[#FlightObject3Ds + 1] = object3d
+        end
+    end
+    FlightObject3Ds[1].mScale = vec3(6, 6, 6)
+    FlightObject3Ds[2].mScale = vec3(6, 6, 6)
+    FlightObject3Ds[3].mScale = vec3(6, 6, 6)
+    FlightObject3Ds[4].mScale = vec3(6, 6, 6)
+    OpaqueObjects:add(FlightObject3Ds[1])
+    OpaqueObjects:add(FlightObject3Ds[2])
+    OpaqueObjects:add(FlightObject3Ds[3])
+    OpaqueObjects:add(FlightObject3Ds[4])
+end
+
 function Resourcesmt.AddObject(inObjects, inId, inAssociatedModel, inUniformIndex, inSimple3dIndex, inGLTFHandle,
                                inMeshIndex)
     local Object = Jkr.Object3D()
@@ -337,22 +383,6 @@ function LoadResources(mt, inWorld3d)
         local GLTFModelCesium = world3d:GetGLTFModel(CesiumGLTFModelIndex)
         local CesiumId = worldShape3d:Add(GLTFModelCesium)
 
-        --[================================[
-            GLTF Loading PBR
-        ]================================]
-        local FlightHelmentGLTFModelIndex = world3d:AddGLTFModel("res/models/FlightHelmet/FlightHelmet.gltf")
-        local GLTFModelFlightHelment = world3d:GetGLTFModel(FlightHelmentGLTFModelIndex)
-        local FlightHelmentId = worldShape3d:Add(GLTFModelFlightHelment)
-        for x = 1, #GLTFModelFlightHelment:GetMaterialsRef(), 1 do
-            local Shaders = Jkrmt.CreateShaderByGLTFMaterial(GLTFModelFlightHelment, x)
-            local Simple3DIndex = world3d:AddSimple3D(i, w)
-            local Simple3D = world3d:GetSimple3D(Simple3DIndex)
-            Simple3D:Compile(
-                i, w, "res/cache/FlightHelmetShader" .. x .. ".glsl",
-                Shaders.vShader,
-                Shaders.fShader, mtGetDefaultResource("Simple3D", "Compute"), false
-            )
-        end
 
         --[================================[
             Others
@@ -375,19 +405,15 @@ function LoadResources(mt, inWorld3d)
             0)
         Resourcesmt.AddObject(OpaqueObjects, mSkyboxCubeId, -1, skyboxUniformIndex, skyboxSimple3dIndex)
         Resourcesmt.AddObject(OpaqueObjects, mPlaneCubeId, -1, shadowedUniformIndex, shadowedSimple3dIndex)
-        Resourcesmt.AddObject(OpaqueObjects, FlightHelmentId, FlightHelmentGLTFModelIndex, -1, basic3dIndex,
-            GLTFModelFlightHelment, 0)
-        OpaqueObjects[4].mScale = vec3(4, 4, 4)
+        Resourcesmt.LoadFlightHelmet()
         CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
 
         Jmath.PrintMatrix(OpaqueObjects[1].mMatrix)
         mtMt:Inject("OpaqueObjects", OpaqueObjects)
-
-        -- AddShadowCastingObject()
         Resourcesmt.AddObject(ShadowCastingObjects, CesiumId, -1, shadowUniformIndex, shadowOffscreenSimple3dIndex)
         ShadowCastingObjects[1].mMatrix = OpaqueObjects[1].mMatrix
-        --Jkrmt.GetGLTFInfo(GLTFModelFlightHelment, true)
         mtMt:Inject("CesiumId", 0)
     end
+
     mt:AddJobF(Compile1)
 end

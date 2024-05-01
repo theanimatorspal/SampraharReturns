@@ -75,7 +75,7 @@ UIDispatch = function()
     wid.Dispatch()
 end
 
-UIUpdate = function()
+UIUpdate = function(mt)
     wid.Update()
 end
 
