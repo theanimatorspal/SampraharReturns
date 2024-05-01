@@ -1,50 +1,4 @@
 Resourcesmt = {}
-function Resourcesmt.LoadFlightHelmet()
-    --[================================[
-            GLTF Loading PBR
-        ]================================]
-    local FlightHelmentGLTFModelIndex = world3d:AddGLTFModel("res/models/FlightHelmet/FlightHelmet.gltf")
-    local GLTFModelFlightHelment = world3d:GetGLTFModel(FlightHelmentGLTFModelIndex)
-    local FlightHelmentId = worldShape3d:Add(GLTFModelFlightHelment)
-    local MaterialToSimple3DMap = {}
-    for x = 1, #GLTFModelFlightHelment:GetMaterialsRef(), 1 do
-        local Shaders = Jkrmt.CreateShaderByGLTFMaterial(GLTFModelFlightHelment, x)
-        local Simple3DIndex = world3d:AddSimple3D(i, w)
-        local Simple3D = world3d:GetSimple3D(Simple3DIndex)
-        Simple3D:Compile(
-            i, w, "res/cache/FlightHelmetShader" .. x .. ".glsl",
-            Shaders.vShader,
-            Shaders.fShader, mtGetDefaultResource("Simple3D", "Compute"), false
-        )
-        MaterialToSimple3DMap[x] = Simple3DIndex
-    end
-
-    local FlightObject3Ds = {}
-    local Meshes = GLTFModelFlightHelment:GetMeshesRef()
-    for x = 1, #Meshes, 1 do
-        local primitives = Meshes[x].mPrimitives
-        for y = 1, #primitives, 1 do
-            local object3d = Jkrmt.CreateObjectByGLTFPrimitiveAndUniform(
-                world3d,
-                FlightHelmentGLTFModelIndex,
-                FlightHelmentId,
-                MaterialToSimple3DMap,
-                x,
-                primitives[y]
-            )
-            FlightObject3Ds[#FlightObject3Ds + 1] = object3d
-        end
-    end
-    FlightObject3Ds[1].mScale = vec3(6, 6, 6)
-    FlightObject3Ds[2].mScale = vec3(6, 6, 6)
-    FlightObject3Ds[3].mScale = vec3(6, 6, 6)
-    FlightObject3Ds[4].mScale = vec3(6, 6, 6)
-    OpaqueObjects:add(FlightObject3Ds[1])
-    OpaqueObjects:add(FlightObject3Ds[2])
-    OpaqueObjects:add(FlightObject3Ds[3])
-    OpaqueObjects:add(FlightObject3Ds[4])
-end
-
 function Resourcesmt.AddObject(inObjects, inId, inAssociatedModel, inUniformIndex, inSimple3dIndex, inGLTFHandle,
                                inMeshIndex)
     local Object = Jkr.Object3D()
@@ -247,7 +201,55 @@ function LoadResources(mt, inWorld3d)
                 vec3 V = normalize(vert_view);
                 vec3 R = normalize(-reflect(L, N));
                 float diffuse = max(dot(N, L), ambient);
-                outFragColor = vec4(vec3(diffuse * shadow), 1.0);
+                outFragColor = vec4(vec3(diffuse * shadow), 0.5);
+            ]])
+            .GlslMainEnd()
+            .NewLine().str
+
+        local Shadowed3dFTextured = Jkrmt.Shader()
+            .Header(450)
+            .NewLine()
+            .In(0, "vec2", "vUV")
+            .In(1, "vec3", "vNormal")
+            .In(2, "vec3", "vert_normal")
+            .In(3, "vec4", "vert_shadowcoords")
+            .In(4, "vec3", "vert_light")
+            .In(5, "vec3", "vert_view")
+            .uSampler2D(3, "ShadowMap")
+            .uSampler2D(4, "ComputeImage")
+            .outFragColor()
+            .Push()
+            .Ubo()
+            .LinearizeDepth()
+            .Define("ambient", "0.1")
+            .Append([[
+
+                float textureProj(vec4 shadowCoord, vec2 off)
+                {
+                    float shadow = 1.0;
+                    if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 )
+                    {
+                        float dist = LinearizeDepth(texture(ShadowMap, shadowCoord.st + off).r, 0.1, 10000); // Todo Place this in ubo near = 0.1, far = 10000
+                        if ( shadowCoord.w > 0.0 && dist < shadowCoord.z )
+                        {
+                            shadow = ambient;
+                        }
+                    }
+                    return shadow;
+                }
+            ]])
+            .GlslMainBegin()
+            .Indent()
+            .Append([[
+                vec4 shadowcoords_norm = vert_shadowcoords / vert_shadowcoords.w;
+                float shadow = textureProj(shadowcoords_norm, vec2(0.0));
+                vec3 N = normalize(vert_normal);
+                vec3 L = normalize(vert_light);
+                vec3 V = normalize(vert_view);
+                vec3 R = normalize(-reflect(L, N));
+                float diffuse = max(dot(N, L), ambient);
+                vec4 computeColor = texture(ComputeImage, vUV);
+                outFragColor = vec4(vec3(diffuse * shadow) + vec3(computeColor), computeColor.a);
             ]])
             .GlslMainEnd()
             .NewLine().str
@@ -292,27 +294,28 @@ function LoadResources(mt, inWorld3d)
                 color = pow(color, vec3(0.4545));
                 outFragColor = vec4(color, 1.0);
 
-                // float ambient  = 0.4;
-                // vec3 R = normalize(-reflect(L, N));
-                // float diffuse = max(dot(N, L), ambient);
-                // outFragColor = vec4(MaterialColor() * diffuse, 1.0);
+                 float ambient  = 0.4;
+                 vec3 R = normalize(-reflect(L, N));
+                 float diffuse = max(dot(N, L), ambient);
+                 outFragColor = vec4(MaterialColor() * diffuse, 1.0);
             ]])
             .GlslMainEnd()
             .NewLine().str
 
+        local basicCompute = mtGetDefaultResource("Simple3D", "Compute")
 
         -- Compile Shader 0
         local basic3dIndex = world3d:AddSimple3D(i, w)
         local basic3d = world3d:GetSimple3D(0)
         basic3d:Compile(i, w, "res/cache/simple3d.glsl", Basic3dV, Basic3dF,
-            mtGetDefaultResource("Simple3D", "Compute"), false)
+            basicCompute, false)
 
         -- Compile Shader 1
         local CesiumSimple3dIndex = world3d:AddSimple3D(i, w)
         local mpbrbasic3d = world3d:GetSimple3D(CesiumSimple3dIndex)
         local VertexShader = Skinning3dV()
         mpbrbasic3d:Compile(i, w, "res/cache/pbrbasic3d.glsl", VertexShader,
-            PBRBasic3dFragment, mtGetDefaultResource("Simpl3D", "Compute"), false)
+            PBRBasic3dFragment, basicCompute, false)
 
         --Compile Shader 2 (Skybox)
         local skyboxSimple3dIndex = world3d:AddSimple3D(i, w)
@@ -320,7 +323,7 @@ function LoadResources(mt, inWorld3d)
         mSkybox3d:SetPipelineContext(Jkr.PipelineContext.Skybox)
         mSkybox3d:Compile(i, w, "res/cache/skybox3d.glsl",
             Skybox3dV,
-            Skybox3dF, mtGetDefaultResource("Simple3D", "Compute"), false)
+            Skybox3dF, basicCompute, false)
 
         --Compile Shader 3 (Shadow)
         local shadowOffscreenSimple3dIndex = world3d:AddSimple3D(i, w)
@@ -328,7 +331,7 @@ function LoadResources(mt, inWorld3d)
         shadowOffscreenSimple3d:CompileForShadowOffscreen(
             i, w, "res/cache/shadowOffscreen3d.glsl",
             Skinning3dV("Shadow"),
-            Jkrmt.GetBasic_FragmentShader(), mtGetDefaultResource("Simple3D", "Compute"), false
+            Jkrmt.GetBasic_FragmentShader(), basicCompute, false
         )
 
         --Compile  Shader 4  (Shadowed)
@@ -337,7 +340,15 @@ function LoadResources(mt, inWorld3d)
         shadowedSimple3d:Compile(
             i, w, "res/cache/shadowed3d.glsl",
             Shadowed3dV,
-            Shadowed3dF, mtGetDefaultResource("Simple3D", "Compute"), false
+            Shadowed3dF, basicCompute, false
+        )
+
+        local shadowedSimple3dTexturedIndex = world3d:AddSimple3D(i, w)
+        local shadowedSimple3dTextured = world3d:GetSimple3D(shadowedSimple3dTexturedIndex)
+        shadowedSimple3dTextured:Compile(
+            i, w, "res/cache/shadowed3d.glsl",
+            Shadowed3dV,
+            Shadowed3dFTextured, basicCompute, false
         )
 
         -- Global Uniform is at 0
@@ -374,26 +385,28 @@ function LoadResources(mt, inWorld3d)
         shadowedUniform:Build(shadowedSimple3d)
         world3d:AddShadowMapToUniform3D(w, shadowedUniformIndex, 1)
 
+        -- Plane Compute Textured Uniform is at 6
+        local planeComputeTextureUniformIndex = world3d:AddUniform3D(i)
+        local planeComputeTextureUniform = world3d:GetUniform3D(planeComputeTextureUniformIndex)
+        planeComputeTextureUniform:Build(shadowedSimple3dTextured)
+        world3d:AddShadowMapToUniform3D(w, planeComputeTextureUniformIndex, 1) -- 1 = SetNo, 1 for normal
+        mtMt:Inject("planeComputeTextureUniformIndex", planeComputeTextureUniformIndex)
+        -- Stuffs
+
         mpbrbasic3d = world3d:GetSimple3D(CesiumSimple3dIndex)
         CesiumUniform = world3d:GetUniform3D(CesiumUniformIndex)
-        local loadSkin = true
-        local loadImages = true
 
         local CesiumGLTFModelIndex = world3d:AddGLTFModel("res/models/CesiumManBlend/CesiumMan.gltf")
         local GLTFModelCesium = world3d:GetGLTFModel(CesiumGLTFModelIndex)
         local CesiumId = worldShape3d:Add(GLTFModelCesium)
 
-
-        --[================================[
-            Others
-        ]================================]
-
-        -- COPY Uniform from a GlTF
+        local loadSkin = true
+        local loadImages = true
         CesiumUniform:Build(mpbrbasic3d, GLTFModelCesium, 0, loadSkin, loadImages)
         CesiumUniform:AddBindingsToUniform3DGLTF(shadowUniform, loadSkin, not loadImages, 1)
 
         local mSkyboxCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
-        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(3, 0.01, 3))
+        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(10, 0.01, 10))
         local mSkyboxCubeId = worldShape3d:Add(mSkyboxCube, vec3(0, 0, 0))
         local mPlaneCubeId = worldShape3d:Add(mPlaneCube, vec3(0, 0, 0))
         Resourcesmt.AddObject(OpaqueObjects,
@@ -405,14 +418,14 @@ function LoadResources(mt, inWorld3d)
             0)
         Resourcesmt.AddObject(OpaqueObjects, mSkyboxCubeId, -1, skyboxUniformIndex, skyboxSimple3dIndex)
         Resourcesmt.AddObject(OpaqueObjects, mPlaneCubeId, -1, shadowedUniformIndex, shadowedSimple3dIndex)
-        Resourcesmt.LoadFlightHelmet()
         CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
 
         Jmath.PrintMatrix(OpaqueObjects[1].mMatrix)
         mtMt:Inject("OpaqueObjects", OpaqueObjects)
         Resourcesmt.AddObject(ShadowCastingObjects, CesiumId, -1, shadowUniformIndex, shadowOffscreenSimple3dIndex)
-        ShadowCastingObjects[1].mMatrix = OpaqueObjects[1].mMatrix
-        mtMt:Inject("CesiumId", 0)
+        ShadowCastingObjects[1].mMatrix = OpaqueObjects[CesiumId + 1].mMatrix
+        mtMt:Inject("CesiumId", CesiumId)
+        mtMt:Inject("LoadedResources", true)
     end
 
     mt:AddJobF(Compile1)

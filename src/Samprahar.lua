@@ -6,16 +6,16 @@ require "JkrGUIv2.ShaderFactory"
 
 local i = Jkr.CreateInstance()
 local w = Jkr.CreateWindow(i, "Samprahar Returns", vec2(900, 480))
-w:BuildShadowPass()
+w:BuildShadowPass(5000, 5000)
 local e = Jkr.CreateEventManager()
 local mt = Jkr.MultiThreading(i)
 local worldShape3d = Jkr.CreateShapeRenderer3D(i, w)
 local world3d = Jkr.World3D(worldShape3d)
-local DefaultCamera = Jkr.Camera3D()
-DefaultCamera:SetAttributes(vec3(0, 0, 0), vec3(10, 10, 10))
+DefaultCamera = Jkr.Camera3D()
+DefaultCamera:SetAttributes(vec3(0, 0, 0), vec3(0, 5, -10))
 DefaultCamera:SetPerspective(0.30, 16 / 9, 0.1, 10000)
 world3d:AddCamera(DefaultCamera)
-world3d:AddLight3D(vec4(10, 10, -10, 1), Jmath.Normalize(vec4(0, 0, 0, 0) - vec4(10, 10, -10, 1)))
+world3d:AddLight3D(vec4(100, 100, -100, 1), Jmath.Normalize(vec4(0, 0, 0, 0) - vec4(10, 10, -10, 1)))
 
 Jkr.ConfigureMultiThreading(mt, {
           { "mt",             mt },
@@ -29,12 +29,12 @@ Jkr.ConfigureMultiThreading(mt, {
           { "mtWorld3d",      world3d },
           { "world3d",        world3d },
 })
-mt:Wait()
 require("src.LoadResources")
 LoadResources(mt, world3d)
 require("src.Mechanics")
 require("src.UserInterface")
-UILoad(i, w, e)
+UILoad(i, w, e, world3d, mt)
+MechanicsLoad(mt, world3d)
 
 
 local DrawToZero = function()
@@ -43,6 +43,7 @@ local DrawToZero = function()
           mtW:SetDefaultScissor(0)
           mtWorld3d:DrawObjectsExplicit(mtW, OpaqueObjects, 0)
           mtW:EndThreadCommandBuffer(0)
+          mtMt:Inject("DrawCompleteSync", DrawCompleteSync + 1)
 end
 
 local ShadowPass = function()
@@ -50,6 +51,7 @@ local ShadowPass = function()
 end
 
 local MThreaded = function()
+          mt:Inject("DrawCompleteSync", 0)
           mt:AddJobF(DrawToZero)
 end
 
@@ -69,7 +71,7 @@ local Event = function()
 end
 
 local Update = function()
-          mt:Wait()
+          while not mt:Get("LoadedResources") do end
           UIUpdate(mt)
           world3d:Update(e)
           MechanicsUpdate(e, world3d, mt)
@@ -111,7 +113,7 @@ while not e:ShouldQuit() do
 
           -- /* All Draws (Main CmdBuffer Recording) is done here*/
           w:BeginDraws(0.1, 0.1, 0.1, 1, 1)
-          mt:Wait()
+          while mt:Get("DrawCompleteSync") ~= 1 do end
           MExecute()
           w:ExecuteUIs() -- The UI CmdBuffer is executed onto the main CmdBuffer
           w:EndDraws()

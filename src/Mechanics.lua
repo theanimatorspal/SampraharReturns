@@ -1,4 +1,10 @@
 Mechanics = {}
+MechanicsLoad = function(mt, inWorld3d)
+          local planeComputeTextureUniformIndex = math.int(mt:Get("planeComputeTextureUniformIndex"))
+          local PlaneUniform = inWorld3d:GetUniform3D(planeComputeTextureUniformIndex)
+          PlaneUniform:AddTextureFromShapeImage(WidUI.s.handle, PlaneTextureComputeImageIndex, 4, 1)
+end
+
 MechanicsEvent = function(e, inWorld3d, inmt)
 
 end
@@ -14,6 +20,9 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
           local rY = cesiumObject.mRotation.y
           local rZ = cesiumObject.mRotation.z
           local rW = cesiumObject.mRotation.w
+          inWorld3d:GetCamera3D(0):SetAttributes(vec3(0, 0, 0) + cesiumObject.mTranslation * 0.5,
+                    cesiumObject.mTranslation * 0.5 + vec3(0, 5, -10))
+          inWorld3d:GetCamera3D(0):SetPerspective(0.80, 16 / 9, 0.1, 10000)
 
           if rW > 1.0 then
                     rW = 1
@@ -80,12 +89,15 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
                     Mechanics.RotateCesiumRight()
           end
 
-          CesiumModelGLTF:BlendCombineAnimation(0.01, WalkAnimationIndex, StillAnimationIndex,
-                    CurrentBlendFactor, true)
+          CesiumModelGLTF:BlendCombineAnimation(0.01,
+                    WalkAnimationIndex,
+                    StillAnimationIndex,
+                    CurrentBlendFactor,
+                    true)
           Uniform:UpdateByGLTFAnimation(CesiumModelGLTF)
           local ShadowCastingObjects = inmt:Get("ShadowCastingObjects")
-          ShadowCastingObjects[1].mTranslation = cesiumObject.mTranslation
-          ShadowCastingObjects[1].mRotation = cesiumObject.mRotation
-          ShadowCastingObjects[1].mScale = cesiumObject.mScale
-          ShadowCastingObjects[1].mMatrix = cesiumObject.mMatrix
+          ShadowCastingObjects[cesiumId + 1].mTranslation = cesiumObject.mTranslation
+          ShadowCastingObjects[cesiumId + 1].mRotation = cesiumObject.mRotation
+          ShadowCastingObjects[cesiumId + 1].mScale = cesiumObject.mScale
+          ShadowCastingObjects[cesiumId + 1].mMatrix = cesiumObject.mMatrix
 end

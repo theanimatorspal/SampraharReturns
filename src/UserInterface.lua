@@ -27,19 +27,42 @@ local CShader = Jkrmt.Shader()
     .NewLine()
     .str
 
-local wid = {}
-UILoad = function(i, w, e)
-    wid = Jkr.CreateWidgetRenderer(i, w, e)
+WidUI = {}
+UILoad = function(i, w, e, inWorld3d, mt)
+    WidUI = Jkr.CreateWidgetRenderer(i, w, e)
+    local Painter = Jkr.CreateCustomImagePainter("res/cache/PlaneShaderCompute.glsl", CShader)
+    Painter:Store(i, w)
+    local PlaneTextureComputeImage = WidUI.CreateComputeImage(vec3(math.huge, math.huge, math.huge), vec3(500, 500, 1))
+    PlaneTextureComputeImage.RegisterPainter(Painter)
+    WidUI.c.PushOneTime(Jkr.CreateDispatchable(
+        function()
+            PlaneTextureComputeImage.BindPainter(Painter)
+            local PC = Jkr.DefaultCustomImagePainterPushConstant()
+            PC.x = vec4(0, 0, 0.8, 0.8)
+            PC.y = vec4(1, 0, 0, 0.8)
+            PC.z = vec4(0.0)
+            PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+            PlaneTextureComputeImage.CopyToSampled()
+        end
+    ), ButtonComputeFrame
+    )
+
+    while not mt:Get("planeComputeTextureUniformIndex") do end
+    PlaneTextureComputeImageIndex = PlaneTextureComputeImage.sampledImage
+    local planeComputeTextureUniformIndex = math.int(mt:Get("planeComputeTextureUniformIndex"))
+    local PlaneUniform = inWorld3d:GetUniform3D(planeComputeTextureUniformIndex)
+    PlaneUniform:AddTextureFromShapeImage(WidUI.s.handle, PlaneTextureComputeImageIndex, 4, 1)
+
     if (ANDROID) then
         local Painter = Jkr.CreateCustomImagePainter("res/cache/UIbasic.glsl", CShader)
         Painter:Store(i, w)
         local CreateButton = function(x, y, inFunction)
-            local Dimension = vec3(wid.WindowDimension.x / 10, wid.WindowDimension.y / 10, 1)
-            local Position = vec3(wid.WindowDimension.x * x - Dimension.x,
-                wid.WindowDimension.y * y - Dimension.y, 50)
-            local ComputeImage = wid.CreateComputeImage(Position, Dimension)
+            local Dimension = vec3(WidUI.WindowDimension.x / 10, WidUI.WindowDimension.y / 10, 1)
+            local Position = vec3(WidUI.WindowDimension.x * x - Dimension.x,
+                WidUI.WindowDimension.y * y - Dimension.y, 50)
+            local ComputeImage = WidUI.CreateComputeImage(Position, Dimension)
             ComputeImage.RegisterPainter(Painter)
-            wid.c.PushOneTime(Jkr.CreateDispatchable(function()
+            WidUI.c.PushOneTime(Jkr.CreateDispatchable(function()
                 ComputeImage.BindPainter(Painter)
                 local PC = Jkr.DefaultCustomImagePainterPushConstant()
                 PC.x = vec4(0, 0, 0.8, 0.8)
@@ -52,10 +75,10 @@ UILoad = function(i, w, e)
                 inFunction()
             end)
             -- TODO space thichesi garne bana
-            wid.c.Push(Jkr.CreateUpdatable(function()
-                local Dimension = vec3(wid.WindowDimension.x / 10, wid.WindowDimension.y / 10, 1)
-                local Position = vec3(wid.WindowDimension.x * x - Dimension.x,
-                    wid.WindowDimension.y * y - Dimension.y, 50)
+            WidUI.c.Push(Jkr.CreateUpdatable(function()
+                local Dimension = vec3(WidUI.WindowDimension.x / 10, WidUI.WindowDimension.y / 10, 1)
+                local Position = vec3(WidUI.WindowDimension.x * x - Dimension.x,
+                    WidUI.WindowDimension.y * y - Dimension.y, 50)
                 Button.Update(Position, Dimension)
             end))
         end
@@ -68,17 +91,17 @@ UILoad = function(i, w, e)
 end
 
 UIDraw = function()
-    wid.Draw()
+    WidUI.Draw()
 end
 
 UIDispatch = function()
-    wid.Dispatch()
+    WidUI.Dispatch()
 end
 
 UIUpdate = function(mt)
-    wid.Update()
+    WidUI.Update()
 end
 
 UIEvent = function()
-    wid.Event()
+    WidUI.Event()
 end
