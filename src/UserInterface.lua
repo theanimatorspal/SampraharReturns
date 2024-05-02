@@ -1,6 +1,6 @@
 require "JkrGUIv2.ShaderFactory"
 local ButtonComputeFrame = 1
-local CShader = Jkrmt.Shader()
+local RoundedRectangleCShader = Jkrmt.Shader()
     .Header(450)
     .CInvocationLayout(1, 1, 1)
     .uImage2D()
@@ -19,8 +19,7 @@ local CShader = Jkrmt.Shader()
 
           vec4 old_color = imageLoad(storageImage, to_draw_at);
           vec4 final_color = vec4(push.mColor.x * color, push.mColor.y * color, push.mColor.z * color, push.mColor.w * color);
-          final_color = mix(final_color, old_color, push.mParam.w);
-
+          final_color = mix(final_color, old_color, 1 - color);
           imageStore(storageImage, to_draw_at, final_color);
               ]])
     .GlslMainEnd()
@@ -30,7 +29,7 @@ local CShader = Jkrmt.Shader()
 WidUI = {}
 UILoad = function(i, w, e, inWorld3d, mt)
     WidUI = Jkr.CreateWidgetRenderer(i, w, e)
-    local Painter = Jkr.CreateCustomImagePainter("res/cache/PlaneShaderCompute.glsl", CShader)
+    local Painter = Jkr.CreateCustomImagePainter("res/cache/PlaneShaderCompute.glsl", RoundedRectangleCShader)
     Painter:Store(i, w)
     local PlaneTextureComputeImage = WidUI.CreateComputeImage(vec3(math.huge, math.huge, math.huge), vec3(500, 500, 1))
     PlaneTextureComputeImage.RegisterPainter(Painter)
@@ -39,12 +38,52 @@ UILoad = function(i, w, e, inWorld3d, mt)
             PlaneTextureComputeImage.BindPainter(Painter)
             local PC = Jkr.DefaultCustomImagePainterPushConstant()
             PC.x = vec4(0, 0, 0.8, 0.8)
-            PC.y = vec4(1, 0, 0, 0.8)
-            PC.z = vec4(0.0)
+            PC.y = vec4(0, 1, 0, 0.5)
+            PC.z = vec4(0.1, 0, 0, 0)
             PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
             PlaneTextureComputeImage.CopyToSampled()
         end
-    ), ButtonComputeFrame
+    ), ButtonComputeFrame)
+
+    local Color = 1
+    WidUI.c.Push(
+        Jkr.CreateUpdatable(function()
+            WidUI.c.PushOneTime(Jkr.CreateDispatchable(
+                function()
+                    PlaneTextureComputeImage.BindPainter(Painter)
+                    local PC = Jkr.DefaultCustomImagePainterPushConstant()
+                    local ColorBack = vec4(0.35, 0.5, 0.4, 0.1)
+                    local ColorCenter = vec4(1, 0.3, 0.2, 1)
+                    local ColorSides = vec4(0.35, 0.1, 0.5, 1)
+                    PC.x = vec4(0, 0, 0.5, 0.5)
+                    PC.y = ColorBack
+                    PC.z = vec4(0.5, 0, 0, 0.5)
+                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                    PC.x = vec4(0, 0, 0.1, 0.1)
+                    PC.y = ColorCenter
+                    PC.z = vec4(0.2, 0, 0, 0.5)
+                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                    PC.x = vec4(0, 0.8, 0.01, 0.1)
+                    PC.y = ColorSides
+                    PC.z = vec4(0.2, 0, 0, 0.5)
+                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                    PC.x = vec4(0, -0.8, 0.01, 0.1)
+                    PC.y = ColorSides
+                    PC.z = vec4(0.2, 0, 0, 0.5)
+                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                    PC.x = vec4(-0.8, 0.0, 0.01, 0.1)
+                    PC.y = ColorSides
+                    PC.z = vec4(0.2, 0, 0, 0.5)
+                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                    PC.x = vec4(0.8, 0.0, 0.01, 0.1)
+                    PC.y = ColorSides
+                    PC.z = vec4(0.2, 0, 0, 0.5)
+                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                    PlaneTextureComputeImage.CopyToSampled()
+                    Color = Color + 0.1
+                end
+            ), ButtonComputeFrame)
+        end), 1
     )
 
     while not mt:Get("planeComputeTextureUniformIndex") do end
@@ -54,7 +93,7 @@ UILoad = function(i, w, e, inWorld3d, mt)
     PlaneUniform:AddTextureFromShapeImage(WidUI.s.handle, PlaneTextureComputeImageIndex, 4, 1)
 
     if (ANDROID) then
-        local Painter = Jkr.CreateCustomImagePainter("res/cache/UIbasic.glsl", CShader)
+        local Painter = Jkr.CreateCustomImagePainter("res/cache/UIbasic.glsl", RoundedRectangleCShader)
         Painter:Store(i, w)
         local CreateButton = function(x, y, inFunction)
             local Dimension = vec3(WidUI.WindowDimension.x / 10, WidUI.WindowDimension.y / 10, 1)

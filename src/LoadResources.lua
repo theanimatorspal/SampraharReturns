@@ -61,7 +61,7 @@ function LoadResources(mt, inWorld3d)
                     vec3 position = mat3(Ubo.view * Push.model) * inPosition.xyz;
                     gl_Position = (Ubo.proj * vec4(position, 0.0)).xyzz;
                     vVertUV = inPosition.xyz;
-            ]])
+            ]]).InvertY()
             .NewLine()
             .GlslMainEnd()
             .NewLine().str
@@ -201,7 +201,7 @@ function LoadResources(mt, inWorld3d)
                 vec3 V = normalize(vert_view);
                 vec3 R = normalize(-reflect(L, N));
                 float diffuse = max(dot(N, L), ambient);
-                outFragColor = vec4(vec3(diffuse * shadow), 0.5);
+                outFragColor = vec4(vec3(diffuse * shadow), 1.0);
             ]])
             .GlslMainEnd()
             .NewLine().str
@@ -268,7 +268,7 @@ function LoadResources(mt, inWorld3d)
             .PI()
             .MaterialColorBegin()
             .Append([[
-                    return vec3(1, 0.5, 0.5) * vec3(texture(image, vUV));
+                    return vec3(0, 0.8, 1.0) * vec3(texture(image, vUV));
             ]])
             .MaterialColorEnd()
             .D_GGX()
@@ -289,15 +289,15 @@ function LoadResources(mt, inWorld3d)
                 Lo += BRDF(L, V, N, 0, roughness);
 
                 // Combination With Ambient
-                vec3 color = MaterialColor() * 0.2;
-                color += Lo;
-                color = pow(color, vec3(0.4545));
-                outFragColor = vec4(color, 1.0);
+                // vec3 color = MaterialColor() * 0.2;
+                // color += Lo;
+                // color = pow(color, vec3(0.4545));
+                // outFragColor = vec4(color, 1.0);
 
-                 float ambient  = 0.4;
+                 float ambient  = 0.5;
                  vec3 R = normalize(-reflect(L, N));
                  float diffuse = max(dot(N, L), ambient);
-                 outFragColor = vec4(MaterialColor() * diffuse, 1.0);
+                 outFragColor = vec4(MaterialColor() * diffuse * 2, 1.0);
             ]])
             .GlslMainEnd()
             .NewLine().str
@@ -406,7 +406,7 @@ function LoadResources(mt, inWorld3d)
         CesiumUniform:AddBindingsToUniform3DGLTF(shadowUniform, loadSkin, not loadImages, 1)
 
         local mSkyboxCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
-        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(10, 0.01, 10))
+        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(10, 0.0001, 10))
         local mSkyboxCubeId = worldShape3d:Add(mSkyboxCube, vec3(0, 0, 0))
         local mPlaneCubeId = worldShape3d:Add(mPlaneCube, vec3(0, 0, 0))
         Resourcesmt.AddObject(OpaqueObjects,
@@ -417,7 +417,9 @@ function LoadResources(mt, inWorld3d)
             GLTFModelCesium,
             0)
         Resourcesmt.AddObject(OpaqueObjects, mSkyboxCubeId, -1, skyboxUniformIndex, skyboxSimple3dIndex)
-        Resourcesmt.AddObject(OpaqueObjects, mPlaneCubeId, -1, shadowedUniformIndex, shadowedSimple3dIndex)
+        --Resourcesmt.AddObject(OpaqueObjects, mPlaneCubeId, -1, shadowedUniformIndex, shadowedSimple3dIndex)
+        Resourcesmt.AddObject(OpaqueObjects, mPlaneCubeId, -1, planeComputeTextureUniformIndex,
+            shadowedSimple3dTexturedIndex)
         CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
 
         Jmath.PrintMatrix(OpaqueObjects[1].mMatrix)
