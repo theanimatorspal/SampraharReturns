@@ -33,6 +33,20 @@ function LoadResources(mt, inWorld3d)
             .InvertY()
             .GlslMainEnd()
             .NewLine().str
+
+        local Basic3dVShadow = Jkrmt.Shader()
+            .Header(450)
+            .NewLine()
+            .VLayout()
+            .Push()
+            .Ubo()
+            .GlslMainBegin()
+            .Indent()
+            .Append("gl_Position = Ubo.proj * Ubo.shadowMatrix * Push.model * vec4(inPosition, 1.0);")
+            .NewLine()
+            .GlslMainEnd()
+            .NewLine().str
+
         local Basic3dF = Jkrmt.Shader()
             .Header(450)
             .NewLine()
@@ -343,6 +357,12 @@ function LoadResources(mt, inWorld3d)
             Shadowed3dF, basicCompute, false
         )
 
+        -- Compile Shader 5 (Basic Shadow for offscreen)
+        local basic3dForOffscreenIndex = world3d:AddSimple3D(i, w)
+        local basic3dForOffscreen = world3d:GetSimple3D(basic3dForOffscreenIndex)
+        basic3dForOffscreen:CompileForShadowOffscreen(i, w, "res/cache/simple3dOffscreen.glsl", Basic3dVShadow, Basic3dF,
+            basicCompute, false)
+
         local shadowedSimple3dTexturedIndex = world3d:AddSimple3D(i, w)
         local shadowedSimple3dTextured = world3d:GetSimple3D(shadowedSimple3dTexturedIndex)
         shadowedSimple3dTextured:Compile(
@@ -405,10 +425,6 @@ function LoadResources(mt, inWorld3d)
         CesiumUniform:Build(mpbrbasic3d, GLTFModelCesium, 0, loadSkin, loadImages)
         CesiumUniform:AddBindingsToUniform3DGLTF(shadowUniform, loadSkin, not loadImages, 1)
 
-        local mSkyboxCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
-        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(10, 0.0001, 10))
-        local mSkyboxCubeId = worldShape3d:Add(mSkyboxCube, vec3(0, 0, 0))
-        local mPlaneCubeId = worldShape3d:Add(mPlaneCube, vec3(0, 0, 0))
         Resourcesmt.AddObject(OpaqueObjects,
             CesiumId,
             CesiumGLTFModelIndex,
@@ -416,16 +432,25 @@ function LoadResources(mt, inWorld3d)
             CesiumSimple3dIndex,
             GLTFModelCesium,
             0)
+
+        local mSkyboxCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
+        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(10, 0.0001, 10))
+        local mCylinder = Jkr.Generator(Jkr.Shapes.Cylinder3D, vec3(5, 5, 16))
+        local mSkyboxCubeId = worldShape3d:Add(mSkyboxCube, vec3(0, 0, 0))
+        local mPlaneCubeId = worldShape3d:Add(mPlaneCube, vec3(0, 0, 0))
+        local mCylinderId = worldShape3d:Add(mCylinder, vec3(0, 0, 0))
         Resourcesmt.AddObject(OpaqueObjects, mSkyboxCubeId, -1, skyboxUniformIndex, skyboxSimple3dIndex)
-        --Resourcesmt.AddObject(OpaqueObjects, mPlaneCubeId, -1, shadowedUniformIndex, shadowedSimple3dIndex)
         Resourcesmt.AddObject(OpaqueObjects, mPlaneCubeId, -1, planeComputeTextureUniformIndex,
             shadowedSimple3dTexturedIndex)
+        Resourcesmt.AddObject(OpaqueObjects, mCylinderId, -1, -1, basic3dIndex)
         CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
 
         Jmath.PrintMatrix(OpaqueObjects[1].mMatrix)
         mtMt:Inject("OpaqueObjects", OpaqueObjects)
         Resourcesmt.AddObject(ShadowCastingObjects, CesiumId, -1, shadowUniformIndex, shadowOffscreenSimple3dIndex)
+        Resourcesmt.AddObject(ShadowCastingObjects, mCylinderId, -1, -1, basic3dForOffscreenIndex)
         ShadowCastingObjects[1].mMatrix = OpaqueObjects[CesiumId + 1].mMatrix
+        ShadowCastingObjects[2].mMatrix = OpaqueObjects[4].mMatrix
         mtMt:Inject("CesiumId", CesiumId)
         mtMt:Inject("LoadedResources", true)
     end

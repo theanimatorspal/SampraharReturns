@@ -25,7 +25,7 @@ local RoundedRectangleCShader = Jkrmt.Shader()
     .GlslMainEnd()
     .NewLine()
     .str
-
+UserInterface = {}
 WidUI = {}
 UILoad = function(i, w, e, inWorld3d, mt)
     WidUI = Jkr.CreateWidgetRenderer(i, w, e)
@@ -45,46 +45,47 @@ UILoad = function(i, w, e, inWorld3d, mt)
         end
     ), ButtonComputeFrame)
 
-    local Color = 1
-    WidUI.c.Push(
-        Jkr.CreateUpdatable(function()
-            WidUI.c.PushOneTime(Jkr.CreateDispatchable(
-                function()
-                    PlaneTextureComputeImage.BindPainter(Painter)
-                    local PC = Jkr.DefaultCustomImagePainterPushConstant()
-                    local ColorBack = vec4(0.35, 0.5, 0.4, 0.1)
-                    local ColorCenter = vec4(1, 0.3, 0.2, 1)
-                    local ColorSides = vec4(0.35, 0.1, 0.5, 1)
-                    PC.x = vec4(0, 0, 0.5, 0.5)
-                    PC.y = ColorBack
-                    PC.z = vec4(0.5, 0, 0, 0.5)
-                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
-                    PC.x = vec4(0, 0, 0.1, 0.1)
-                    PC.y = ColorCenter
-                    PC.z = vec4(0.2, 0, 0, 0.5)
-                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
-                    PC.x = vec4(0, 0.8, 0.01, 0.1)
-                    PC.y = ColorSides
-                    PC.z = vec4(0.2, 0, 0, 0.5)
-                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
-                    PC.x = vec4(0, -0.8, 0.01, 0.1)
-                    PC.y = ColorSides
-                    PC.z = vec4(0.2, 0, 0, 0.5)
-                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
-                    PC.x = vec4(-0.8, 0.0, 0.01, 0.1)
-                    PC.y = ColorSides
-                    PC.z = vec4(0.2, 0, 0, 0.5)
-                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
-                    PC.x = vec4(0.8, 0.0, 0.01, 0.1)
-                    PC.y = ColorSides
-                    PC.z = vec4(0.2, 0, 0, 0.5)
-                    PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
-                    PlaneTextureComputeImage.CopyToSampled()
-                    Color = Color + 0.1
-                end
-            ), ButtonComputeFrame)
-        end), 1
-    )
+    UserInterface.DrawPlatform = function(inBackColor, inCenterColor, inSideColor)
+        local Color = 1
+        WidUI.c.PushOneTime(Jkr.CreateDispatchable(
+            function()
+                PlaneTextureComputeImage.BindPainter(Painter)
+                local PC = Jkr.DefaultCustomImagePainterPushConstant()
+                local ColorBack = vec4(0.35, 0.5, 0.4, 0.1)
+                local ColorCenter = vec4(1, 0.3, 0.2, 1)
+                local ColorSides = vec4(0.35, 0.1, 0.5, 1)
+                if inBackColor then ColorBack = inBackColor end
+                if inCenterColor then ColorCenter = inCenterColor end
+                if inSideColor then ColorSides = inSideColor end
+                PC.x = vec4(0, 0, 0.5, 0.5)
+                PC.y = ColorBack
+                PC.z = vec4(0.5, 0, 0, 0.5)
+                PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                PC.x = vec4(0, 0, 0.1, 0.1)
+                PC.y = ColorCenter
+                PC.z = vec4(0.2, 0, 0, 0.5)
+                PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                PC.x = vec4(0, 0.8, 0.01, 0.1)
+                PC.y = ColorSides
+                PC.z = vec4(0.2, 0, 0, 0.5)
+                PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                PC.x = vec4(0, -0.8, 0.01, 0.1)
+                PC.y = ColorSides
+                PC.z = vec4(0.2, 0, 0, 0.5)
+                PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                PC.x = vec4(-0.8, 0.0, 0.01, 0.1)
+                PC.y = ColorSides
+                PC.z = vec4(0.2, 0, 0, 0.5)
+                PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                PC.x = vec4(0.8, 0.0, 0.01, 0.1)
+                PC.y = ColorSides
+                PC.z = vec4(0.2, 0, 0, 0.5)
+                PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                PlaneTextureComputeImage.CopyToSampled()
+                Color = Color + 0.1
+            end
+        ), ButtonComputeFrame)
+    end
 
     while not mt:Get("planeComputeTextureUniformIndex") do end
     PlaneTextureComputeImageIndex = PlaneTextureComputeImage.sampledImage
