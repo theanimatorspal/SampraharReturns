@@ -24,11 +24,16 @@ function LoadResources(mt, inWorld3d)
             .Header(450)
             .NewLine()
             .VLayout()
+            .Out(0, "vec2", "vUV")
+            .Out(1, "vec3", "vNormal")
             .Push()
             .Ubo()
             .GlslMainBegin()
             .Indent()
             .Append("gl_Position = Ubo.proj * Ubo.view * Push.model * vec4(inPosition, 1.0);")
+            .NewLine()
+            .Append("vUV = inUV;")
+            .Append("vNormal = inNormal;")
             .NewLine()
             .InvertY()
             .GlslMainEnd()
@@ -57,6 +62,23 @@ function LoadResources(mt, inWorld3d)
             .Indent()
             .Append([[
                 outFragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            ]])
+            .GlslMainEnd()
+            .NewLine().str
+
+        local Basic3dFTextured = Jkrmt.Shader()
+            .Header(450)
+            .NewLine()
+            .outFragColor()
+            .In(0, "vec2", "vUV")
+            .In(1, "vec3", "vNormal")
+            .uSampler2D(3, "samplerImage")
+            .Push()
+            .Ubo()
+            .GlslMainBegin()
+            .Indent()
+            .Append([[
+                outFragColor = texture(samplerImage, vUV);
             ]])
             .GlslMainEnd()
             .NewLine().str
@@ -363,16 +385,26 @@ function LoadResources(mt, inWorld3d)
         basic3dForOffscreen:CompileForShadowOffscreen(i, w, "res/cache/simple3dOffscreen.glsl", Basic3dVShadow, Basic3dF,
             basicCompute, false)
 
+        -- Compile Shader 6 (Basic Shadowed Textured)
         local shadowedSimple3dTexturedIndex = world3d:AddSimple3D(i, w)
         local shadowedSimple3dTextured = world3d:GetSimple3D(shadowedSimple3dTexturedIndex)
         shadowedSimple3dTextured:Compile(
-            i, w, "res/cache/shadowed3d.glsl",
+            i, w, "res/cache/shadowed3dTextured.glsl",
             Shadowed3dV,
             Shadowed3dFTextured, basicCompute, false
         )
 
-        -- Global Uniform is at 0
+        -- Compile Shader 7 (Basic Textured)
+        local basicTexturedSimple3dIndex = world3d:AddSimple3D(i, w)
+        local basicTexturedSimple3d = world3d:GetSimple3D(basicTexturedSimple3dIndex)
+        basicTexturedSimple3d:Compile(
+            i, w, "res/cache/basicTexturedSimple3d.glsl",
+            Basic3dV,
+            Basic3dFTextured, basicCompute, false
+        )
 
+
+        -- Global Uniform is at 0
         local GlobalUniformIndex = world3d:AddUniform3D(i)
         local GlobalUniform3d = world3d:GetUniform3D(GlobalUniformIndex)
         GlobalUniform3d:Build(basic3d)
@@ -413,6 +445,13 @@ function LoadResources(mt, inWorld3d)
         mtMt:Inject("planeComputeTextureUniformIndex", planeComputeTextureUniformIndex)
         -- Stuffs
 
+        -- Aimer Uniform is at 7
+        local aimerUniformIndex = world3d:AddUniform3D(i)
+        local aimerUniform = world3d:GetUniform3D(aimerUniformIndex)
+        aimerUniform:Build(basicTexturedSimple3d)
+        mtMt:Inject("aimerUniformIndex", aimerUniformIndex)
+
+
         mpbrbasic3d = world3d:GetSimple3D(CesiumSimple3dIndex)
         CesiumUniform = world3d:GetUniform3D(CesiumUniformIndex)
 
@@ -436,13 +475,16 @@ function LoadResources(mt, inWorld3d)
         local mSkyboxCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
         local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(10, 0.0001, 10))
         local mCylinder = Jkr.Generator(Jkr.Shapes.Cylinder3D, vec3(5, 5, 16))
+        local mAimerCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 0.0001, 1))
         local mSkyboxCubeId = worldShape3d:Add(mSkyboxCube, vec3(0, 0, 0))
         local mPlaneCubeId = worldShape3d:Add(mPlaneCube, vec3(0, 0, 0))
         local mCylinderId = worldShape3d:Add(mCylinder, vec3(0, 0, 0))
+        local mAimerCubeId = worldShape3d:Add(mAimerCube, vec3(0, 0, 0))
         Resourcesmt.AddObject(OpaqueObjects, mSkyboxCubeId, -1, skyboxUniformIndex, skyboxSimple3dIndex)
         Resourcesmt.AddObject(OpaqueObjects, mPlaneCubeId, -1, planeComputeTextureUniformIndex,
             shadowedSimple3dTexturedIndex)
         Resourcesmt.AddObject(OpaqueObjects, mCylinderId, -1, -1, basic3dIndex)
+        Resourcesmt.AddObject(OpaqueObjects, mAimerCubeId, -1, aimerUniformIndex, basicTexturedSimple3dIndex)
         CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
 
         Jmath.PrintMatrix(OpaqueObjects[1].mMatrix)

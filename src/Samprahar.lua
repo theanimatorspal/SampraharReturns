@@ -3,6 +3,7 @@ require "JkrGUIv2.Widgets"
 require "JkrGUIv2.Threed"
 require "JkrGUIv2.Multit"
 require "JkrGUIv2.ShaderFactory"
+collectgarbage("stop")
 
 local i = Jkr.CreateInstance()
 local w = Jkr.CreateWindow(i, "Samprahar Returns", vec2(900, 480))
@@ -34,7 +35,7 @@ LoadResources(mt, world3d)
 require("src.Mechanics")
 require("src.UserInterface")
 UILoad(i, w, e, world3d, mt)
-MechanicsLoad(mt, world3d)
+MechanicsLoad(mt, world3d, i)
 
 
 local DrawToZero = function()
@@ -125,4 +126,5 @@ while not e:ShouldQuit() do
                     w:SetTitle("FrameRate: " .. 1000 / delta)
           end
           frameCount = frameCount + 1
+          collectgarbage("collect")
 end

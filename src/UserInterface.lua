@@ -25,6 +25,21 @@ local RoundedRectangleCShader = Jkrmt.Shader()
     .GlslMainEnd()
     .NewLine()
     .str
+
+local AimerCShader = Jkrmt.Shader()
+    .Header(450)
+    .CInvocationLayout(1, 1, 1)
+    .uImage2D()
+    .ImagePainterPush()
+    .GlslMainBegin()
+    .ImagePainterAssist()
+    .Append([[
+
+    ]])
+    .GlslMainEnd()
+    .NewLine()
+    .str
+
 UserInterface = {}
 WidUI = {}
 UILoad = function(i, w, e, inWorld3d, mt)
@@ -45,6 +60,24 @@ UILoad = function(i, w, e, inWorld3d, mt)
         end
     ), ButtonComputeFrame)
 
+    local AimerTextureComputeImage = WidUI.CreateComputeImage(vec3(math.huge, math.huge, math.huge), vec3(500, 500, 1))
+    AimerTextureComputeImage.RegisterPainter(Painter)
+    AimerTextureComputeImageIndex = AimerTextureComputeImage.sampledImage
+
+    UserInterface.DrawToAimer = function(inFrame)
+        WidUI.c.PushOneTime(Jkr.CreateDispatchable(
+            function()
+                local PC = Jkr.DefaultCustomImagePainterPushConstant()
+                PC.x = vec4(0, 0, 0.5, 0.5)
+                PC.y = vec4(1, 0, 0, 1)
+                PC.z = vec4(0.5, 0, 0, 0.5)
+                AimerTextureComputeImage.BindPainter(Painter)
+                AimerTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                AimerTextureComputeImage.CopyToSampled()
+            end
+        ), inFrame)
+    end
+
     UserInterface.DrawPlatform = function(inBackColor, inCenterColor, inSideColor)
         local Color = 1
         WidUI.c.PushOneTime(Jkr.CreateDispatchable(
@@ -52,8 +85,8 @@ UILoad = function(i, w, e, inWorld3d, mt)
                 PlaneTextureComputeImage.BindPainter(Painter)
                 local PC = Jkr.DefaultCustomImagePainterPushConstant()
                 local ColorBack = vec4(0.35, 0.5, 0.4, 0.1)
-                local ColorCenter = vec4(1, 0.3, 0.2, 1)
-                local ColorSides = vec4(0.35, 0.1, 0.5, 1)
+                local ColorCenter = vec4(1, 0.3, 0.2, 0.7)
+                local ColorSides = vec4(0.35, 0.1, 0.5, 0.7)
                 if inBackColor then ColorBack = inBackColor end
                 if inCenterColor then ColorCenter = inCenterColor end
                 if inSideColor then ColorSides = inSideColor end
@@ -88,10 +121,11 @@ UILoad = function(i, w, e, inWorld3d, mt)
     end
 
     while not mt:Get("planeComputeTextureUniformIndex") do end
+    local Binding = 4
     PlaneTextureComputeImageIndex = PlaneTextureComputeImage.sampledImage
     local planeComputeTextureUniformIndex = math.int(mt:Get("planeComputeTextureUniformIndex"))
     local PlaneUniform = inWorld3d:GetUniform3D(planeComputeTextureUniformIndex)
-    PlaneUniform:AddTextureFromShapeImage(WidUI.s.handle, PlaneTextureComputeImageIndex, 4, 1)
+    PlaneUniform:AddTextureFromShapeImage(WidUI.s.handle, PlaneTextureComputeImageIndex, Binding, 1)
 
     if (ANDROID) then
         local Painter = Jkr.CreateCustomImagePainter("res/cache/UIbasic.glsl", RoundedRectangleCShader)
