@@ -34,6 +34,17 @@ local AimerCShader = Jkrmt.Shader()
     .GlslMainBegin()
     .ImagePainterAssist()
     .Append([[
+          vec2 center = vec2(push.mPosDimen.x, push.mPosDimen.y);
+          vec2 hw = vec2(push.mPosDimen.z, push.mPosDimen.w);
+          float radius = push.mParam.x;
+          vec2 Q = abs(xy - center) - hw;
+
+          float color = distance(center, xy) - radius;
+          //color = smoothstep(-0.5, 0.5, -color);
+
+          vec4 final_color = vec4(push.mColor.x, push.mColor.y, push.mColor.z, push.mColor.w * color);
+          final_color.w = sin(color * 10 + push.mParam.z);
+          imageStore(storageImage, to_draw_at, final_color);
 
     ]])
     .GlslMainEnd()
@@ -46,6 +57,9 @@ UILoad = function(i, w, e, inWorld3d, mt)
     WidUI = Jkr.CreateWidgetRenderer(i, w, e)
     local Painter = Jkr.CreateCustomImagePainter("res/cache/PlaneShaderCompute.glsl", RoundedRectangleCShader)
     Painter:Store(i, w)
+    local AimerPainter = Jkr.CreateCustomImagePainter("res/cache/AimerShaderCompute.glsl", AimerCShader)
+    AimerPainter:Store(i, w)
+
     local PlaneTextureComputeImage = WidUI.CreateComputeImage(vec3(math.huge, math.huge, math.huge), vec3(500, 500, 1))
     PlaneTextureComputeImage.RegisterPainter(Painter)
     WidUI.c.PushOneTime(Jkr.CreateDispatchable(
@@ -53,7 +67,7 @@ UILoad = function(i, w, e, inWorld3d, mt)
             PlaneTextureComputeImage.BindPainter(Painter)
             local PC = Jkr.DefaultCustomImagePainterPushConstant()
             PC.x = vec4(0, 0, 0.8, 0.8)
-            PC.y = vec4(0, 1, 0, 0.5)
+            PC.y = vec4(0, 1, 0, 0.1)
             PC.z = vec4(0.1, 0, 0, 0)
             PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
             PlaneTextureComputeImage.CopyToSampled()
@@ -64,18 +78,20 @@ UILoad = function(i, w, e, inWorld3d, mt)
     AimerTextureComputeImage.RegisterPainter(Painter)
     AimerTextureComputeImageIndex = AimerTextureComputeImage.sampledImage
 
-    UserInterface.DrawToAimer = function(inFrame)
-        WidUI.c.PushOneTime(Jkr.CreateDispatchable(
+    local Offset = 0
+    UserInterface.DrawToAimer = function()
+        WidUI.c.Push(Jkr.CreateDispatchable(
             function()
                 local PC = Jkr.DefaultCustomImagePainterPushConstant()
-                PC.x = vec4(0, 0, 0.5, 0.5)
-                PC.y = vec4(1, 0, 0, 1)
-                PC.z = vec4(0.5, 0, 0, 0.5)
-                AimerTextureComputeImage.BindPainter(Painter)
-                AimerTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+                PC.x = vec4(0, 0, 0.2, 0.2)
+                PC.y = vec4(5, 0.7, 0.7, 3)
+                PC.z = vec4(0.5, 0, Offset, 0.5)
+                AimerTextureComputeImage.BindPainter(AimerPainter)
+                AimerTextureComputeImage.DrawPainter(AimerPainter, PC, math.int(500), math.int(500), 1)
                 AimerTextureComputeImage.CopyToSampled()
+                Offset = Offset + 0.4
             end
-        ), inFrame)
+        ))
     end
 
     UserInterface.DrawPlatform = function(inBackColor, inCenterColor, inSideColor)
@@ -90,6 +106,12 @@ UILoad = function(i, w, e, inWorld3d, mt)
                 if inBackColor then ColorBack = inBackColor end
                 if inCenterColor then ColorCenter = inCenterColor end
                 if inSideColor then ColorSides = inSideColor end
+
+                PC.x = vec4(0, 0, 0.9, 0.9)
+                PC.y = vec4(0, 1, 0, 1)
+                PC.z = vec4(0.5, 0, 0, 0.5)
+                PlaneTextureComputeImage.DrawPainter(Painter, PC, math.int(500), math.int(500), 1)
+
                 PC.x = vec4(0, 0, 0.5, 0.5)
                 PC.y = ColorBack
                 PC.z = vec4(0.5, 0, 0, 0.5)

@@ -71,11 +71,11 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
           local planeObject = objects[3]
           local cylinderObject = objects[4]
           local aimerObject = objects[5]
-          aimerObject.mScale = vec3(0.5, 0.5, 0.5) * FireModeFactor
-
-          cylinderObject.mScale = vec3(0.1, 0.1, 0.1)
+          aimerObject.mScale = vec3(0.3, 0.3, 0.3) * FireModeFactor
+          aimerObject.mRotation = aimerObject.mRotation:Rotate_deg(30, vec3(1, 0, 0))
+          cylinderObject.mScale = vec3(0.1, 0.1, 0.1) * 0.5
           if not IsLoaded then
-                    aimerObject.mTranslation = aimerObject.mTranslation + vec3(0.5, 0, 1)
+                    aimerObject.mTranslation = aimerObject.mTranslation + vec3(3, -0.5, 1)
                     aimerObject.mRotation = aimerObject.mRotation:Rotate_deg(90, vec3(0, 0, 1))
                     cylinderObject.mRotation = cylinderObject.mRotation:Rotate_deg(90, vec3(0, 0, 1))
                     IsLoaded = true
