@@ -473,7 +473,7 @@ function LoadResources(mt, inWorld3d)
             0)
 
         local mSkyboxCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
-        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(10, 0.0001, 10))
+        local mPlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(20, 0.0001, 20))
         local mCylinder = Jkr.Generator(Jkr.Shapes.Cylinder3D, vec3(5, 5, 16))
         local mAimerCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 0.0001, 1))
         local mSkyboxCubeId = worldShape3d:Add(mSkyboxCube, vec3(0, 0, 0))

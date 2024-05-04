@@ -21,6 +21,7 @@ end
 
 local CallBuffer = Jkr.CreateCallBuffers()
 local CurrentStillWalkBlendFactor = 0
+local CurrentJumpBlendFactor = 0
 local Frame = 1
 local CesiumMoving = false
 
@@ -28,11 +29,32 @@ local CameraTarget = vec3(0, 0, 0)
 local CameraPosition = vec3(0, 5, -10)
 local ShouldListenToEvents = true
 local ShouldListenToCameraEvents = true
+local ShouldListenToJumpEvent = true
 local LocalCameraTarget = vec3(0, 0, 0)
 local LocalCameraPosition = vec3(0, 2, 0)
 local CesiumRotationSensitivity = 1
 local FireModeFactor = 0.0
 local IsLoaded = false
+
+local FarCameraView = 0.0
+local NearCameraView = 1.0
+local LocalTargetCameraView = 0.0
+local cesiumObject = {}
+local skyboxObject = {}
+local planeObject = {}
+local cylinderObject = {}
+local aimerObject = {}
+local TranslationVector = {}
+
+local CesiumModelGLTF = {}
+local Uniform = {}
+local cesiumId = {}
+local objects = {}
+
+local WalkAnimationIndex = 0
+local StillAnimationIndex = 1
+local JumpAnimationIndex = 2
+local AimAnimationIndex = 3
 
 local GetTranslationVectorFromYRotation = function(inQuad)
           local rX = inQuad.x
@@ -56,21 +78,17 @@ local GetTranslationVectorFromYRotation = function(inQuad)
           return vec3(dX, 0, dZ)
 end
 
-local FarCameraView = 0.0
-local NearCameraView = 1.0
-local LocalTargetCameraView = 0.0
-
 MechanicsUpdate = function(e, inWorld3d, inmt)
           CesiumMoving = false
-          local CesiumModelGLTF = inWorld3d:GetGLTFModel(0)
-          local Uniform = inWorld3d:GetUniform3D(1)
-          local cesiumId = inmt:Get("CesiumId")
-          local objects = inmt:Get("OpaqueObjects")
-          local cesiumObject = objects[1]
-          local skyboxObject = objects[2]
-          local planeObject = objects[3]
-          local cylinderObject = objects[4]
-          local aimerObject = objects[5]
+          CesiumModelGLTF = inWorld3d:GetGLTFModel(0)
+          Uniform = inWorld3d:GetUniform3D(1)
+          cesiumId = inmt:Get("CesiumId")
+          objects = inmt:Get("OpaqueObjects")
+          cesiumObject = objects[1]
+          skyboxObject = objects[2]
+          planeObject = objects[3]
+          cylinderObject = objects[4]
+          aimerObject = objects[5]
           aimerObject.mScale = vec3(0.3, 0.3, 0.3) * FireModeFactor
           aimerObject.mRotation = aimerObject.mRotation:Rotate_deg(30, vec3(1, 0, 0))
           cylinderObject.mScale = vec3(0.1, 0.1, 0.1) * 0.5
@@ -78,136 +96,187 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
                     aimerObject.mTranslation = aimerObject.mTranslation + vec3(3, -0.5, 1)
                     aimerObject.mRotation = aimerObject.mRotation:Rotate_deg(90, vec3(0, 0, 1))
                     cylinderObject.mRotation = cylinderObject.mRotation:Rotate_deg(90, vec3(0, 0, 1))
-                    IsLoaded = true
           end
           cylinderObject.mTranslation = vec3(0, 0.5, 0)
 
-          local TranslationVector = GetTranslationVectorFromYRotation(cesiumObject.mRotation)
+          TranslationVector = GetTranslationVectorFromYRotation(cesiumObject.mRotation)
 
-          local WalkAnimationIndex = 0
-          local StillAnimationIndex = 1
           if CurrentStillWalkBlendFactor < 1.0 then
                     CurrentStillWalkBlendFactor = CurrentStillWalkBlendFactor + 0.1
           elseif CurrentStillWalkBlendFactor > 1.0 then
                     CurrentStillWalkBlendFactor = 1.0
           end
 
-
-          Mechanics.PutCameraAtCesium = function()
-                    local CesiumObjectTranslation = cesiumObject:GetLocalMatrix():GetTranslationComponent()
-                    local CameraPosition =
-                        (CesiumObjectTranslation - TranslationVector * 5 + LocalCameraPosition) * NearCameraView
-                        + (CesiumObjectTranslation - TranslationVector * 10 + LocalCameraPosition) * FarCameraView
-                    local CameraTarget = (CesiumObjectTranslation + TranslationVector * 5) * NearCameraView
-                        + (CesiumObjectTranslation + TranslationVector * 10) * FarCameraView
-
-                    inWorld3d:GetCamera3D(0):SetAttributes(CameraTarget, CameraPosition)
-                    inWorld3d:GetCamera3D(0):SetPerspective(0.80, 16 / 9, 0.1, 10000)
-          end
+          -- JUMP MECHANICS
+          cesiumObject.mTranslation.y = CurrentJumpBlendFactor * 2
 
 
-          Mechanics.MoveCesiumFront = function()
-                    CesiumModelGLTF:BlendCombineAnimation(0.1, WalkAnimationIndex, StillAnimationIndex,
-                              CurrentStillWalkBlendFactor, true)
-                    cesiumObject.mTranslation = cesiumObject.mTranslation + TranslationVector * 0.1
-                    if CurrentStillWalkBlendFactor > 0 then
-                              CurrentStillWalkBlendFactor = CurrentStillWalkBlendFactor - 0.2
-                    elseif CurrentStillWalkBlendFactor < 0 then
-                              CurrentStillWalkBlendFactor = 0
+          if not IsLoaded then
+                    Mechanics.PutCameraAtCesium = function()
+                              local CesiumObjectTranslation = cesiumObject:GetLocalMatrix():GetTranslationComponent()
+                              local CameraPosition =
+                                  (CesiumObjectTranslation - TranslationVector * 5 + LocalCameraPosition) *
+                                  NearCameraView
+                                  + (CesiumObjectTranslation - TranslationVector * 10 + LocalCameraPosition) *
+                                  FarCameraView
+                              local CameraTarget = (CesiumObjectTranslation + TranslationVector * 5) * NearCameraView
+                                  + (CesiumObjectTranslation + TranslationVector * 10) * FarCameraView
+
+                              inWorld3d:GetCamera3D(0):SetAttributes(CameraTarget, CameraPosition)
+                              inWorld3d:GetCamera3D(0):SetPerspective(0.80, 16 / 9, 0.1, 10000)
                     end
-                    CesiumMoving = true
-          end
 
-          Mechanics.MoveCesiumBack = function()
-                    CesiumModelGLTF:BlendCombineAnimation(0.1, WalkAnimationIndex, StillAnimationIndex,
-                              CurrentStillWalkBlendFactor, true)
-                    cesiumObject.mTranslation = cesiumObject.mTranslation - TranslationVector * 0.1
-                    if CurrentStillWalkBlendFactor > 0 then
-                              CurrentStillWalkBlendFactor = CurrentStillWalkBlendFactor - 0.2
-                    elseif CurrentStillWalkBlendFactor < 0 then
-                              CurrentStillWalkBlendFactor = 0
+
+                    Mechanics.MoveCesiumFront = function()
+                              cesiumObject.mTranslation = cesiumObject.mTranslation + TranslationVector * 0.1
+                              if CurrentStillWalkBlendFactor > 0 then
+                                        CurrentStillWalkBlendFactor = CurrentStillWalkBlendFactor - 0.2
+                              elseif CurrentStillWalkBlendFactor < 0 then
+                                        CurrentStillWalkBlendFactor = 0
+                              end
+
+                              if FireModeFactor == 1 then
+                                        Mechanics.SwitchFireMode()
+                              end
+                              CesiumMoving = true
                     end
-                    CesiumMoving = true
-          end
 
-          Mechanics.RotateCesiumLeft = function()
-                    cesiumObject.mRotation = cesiumObject.mRotation:Rotate_deg(10.0 * CesiumRotationSensitivity,
-                              vec3(0, 1, 0))
-                    CesiumMoving = true
-          end
-
-          Mechanics.RotateCesiumRight = function()
-                    cesiumObject.mRotation = cesiumObject.mRotation:Rotate_deg(-10.0 * CesiumRotationSensitivity,
-                              vec3(0, 1, 0))
-                    CesiumMoving = true
-          end
-
-          Mechanics.SwitchCameraView = function()
-                    local Frame = 1
-                    if NearCameraView >= 1 then
-                              local NearCameraView_ = NearCameraView
-                              while NearCameraView_ >= 0 do
-                                        CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                                                  NearCameraView = NearCameraView - 0.1
-                                                  FarCameraView = FarCameraView + 0.1
-                                                  ShouldListenToCameraEvents = false
-                                        end), Frame)
-                                        NearCameraView_ = NearCameraView_ - 0.1
-                                        Frame = Frame + 1
+                    Mechanics.MoveCesiumBack = function()
+                              cesiumObject.mTranslation = cesiumObject.mTranslation - TranslationVector * 0.1
+                              if CurrentStillWalkBlendFactor > 0 then
+                                        CurrentStillWalkBlendFactor = CurrentStillWalkBlendFactor - 0.2
+                              elseif CurrentStillWalkBlendFactor < 0 then
+                                        CurrentStillWalkBlendFactor = 0
                               end
-                              CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                                        FarCameraView = 1
-                                        NearCameraView = 0
-                                        ShouldListenToCameraEvents = true
-                              end), Frame)
-                    elseif FarCameraView >= 1 then
-                              local FarCameraView_ = FarCameraView
-                              while FarCameraView_ >= 0 do
-                                        CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                                                  NearCameraView = NearCameraView + 0.1
-                                                  FarCameraView = FarCameraView - 0.1
-                                                  ShouldListenToCameraEvents = false
-                                        end), Frame)
-                                        FarCameraView_ = FarCameraView_ - 0.1
-                                        Frame = Frame + 1
+                              if FireModeFactor == 1 then
+                                        Mechanics.SwitchFireMode()
                               end
-                              CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                                        FarCameraView = 0
-                                        NearCameraView = 1
-                                        ShouldListenToCameraEvents = true
-                              end), Frame)
+
+                              CesiumMoving = true
                     end
-          end
 
-          Mechanics.StartFireMode = function()
-                    local Frame = 1
-                    if FireModeFactor == 0.0 then
-                              local FireModeFactor_ = FireModeFactor
-                              while FireModeFactor_ <= 1.0 do
+                    Mechanics.MoveAimerUp = function()
+                              if FireModeFactor == 1 then
+                                        aimerObject.mTranslation.z = aimerObject.mTranslation.z + 0.01
+                              end
+                    end
+
+                    Mechanics.MoveAimerDown = function()
+                              if FireModeFactor == 1 then
+                                        aimerObject.mTranslation.z = aimerObject.mTranslation.z - 0.01
+                              end
+                    end
+
+                    Mechanics.RotateCesiumLeft = function()
+                              cesiumObject.mRotation = cesiumObject.mRotation:Rotate_deg(
+                                        10.0 * CesiumRotationSensitivity,
+                                        vec3(0, 1, 0))
+                              CesiumMoving = true
+                    end
+
+                    Mechanics.RotateCesiumRight = function()
+                              cesiumObject.mRotation = cesiumObject.mRotation:Rotate_deg(
+                                        -10.0 * CesiumRotationSensitivity,
+                                        vec3(0, 1, 0))
+                              CesiumMoving = true
+                    end
+
+                    Mechanics.SwitchCameraView = function()
+                              local Frame = 1
+                              if NearCameraView >= 1 then
+                                        local NearCameraView_ = NearCameraView
+                                        while NearCameraView_ >= 0 do
+                                                  CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
+                                                            NearCameraView = NearCameraView - 0.1
+                                                            FarCameraView = FarCameraView + 0.1
+                                                            ShouldListenToCameraEvents = false
+                                                  end), Frame)
+                                                  NearCameraView_ = NearCameraView_ - 0.1
+                                                  Frame = Frame + 1
+                                        end
                                         CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                                                  FireModeFactor = FireModeFactor + 0.1
-                                                  ShouldListenToEvents = false
+                                                  FarCameraView = 1
+                                                  NearCameraView = 0
+                                                  ShouldListenToCameraEvents = true
                                         end), Frame)
-                                        FireModeFactor_ = FireModeFactor_ + 0.1
+                              elseif FarCameraView >= 1 then
+                                        local FarCameraView_ = FarCameraView
+                                        while FarCameraView_ >= 0 do
+                                                  CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
+                                                            NearCameraView = NearCameraView + 0.1
+                                                            FarCameraView = FarCameraView - 0.1
+                                                            ShouldListenToCameraEvents = false
+                                                  end), Frame)
+                                                  FarCameraView_ = FarCameraView_ - 0.1
+                                                  Frame = Frame + 1
+                                        end
+                                        CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
+                                                  FarCameraView = 0
+                                                  NearCameraView = 1
+                                                  ShouldListenToCameraEvents = true
+                                        end), Frame)
+                              end
+                    end
+
+                    Mechanics.SwitchFireMode = function()
+                              local Frame = 1
+                              if FireModeFactor == 0.0 then
+                                        local FireModeFactor_ = FireModeFactor
+                                        while FireModeFactor_ <= 1.0 do
+                                                  CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
+                                                            FireModeFactor = FireModeFactor + 0.1
+                                                            ShouldListenToEvents = false
+                                                  end), Frame)
+                                                  FireModeFactor_ = FireModeFactor_ + 0.1
+                                                  Frame = Frame + 1
+                                        end
+                                        CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
+                                                  FireModeFactor = 1.0
+                                                  CesiumRotationSensitivity = 0.1
+                                                  ShouldListenToEvents = true
+                                        end), Frame)
+                              elseif FireModeFactor == 1.0 then
+                                        local FireModeFactor_ = FireModeFactor
+                                        while FireModeFactor_ >= 0.0 do
+                                                  CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
+                                                            FireModeFactor = FireModeFactor - 0.1
+                                                            ShouldListenToEvents = false
+                                                  end), Frame)
+                                                  FireModeFactor_ = FireModeFactor_ - 0.1
+                                                  Frame = Frame + 1
+                                        end
+                                        CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
+                                                  FireModeFactor = 0.0
+                                                  CesiumRotationSensitivity = 1
+                                                  ShouldListenToEvents = true
+                                        end), Frame)
+                              end
+                    end
+
+                    Mechanics.JumpCesium = function()
+                              local Frame = 1
+                              local CurrentJumpBlendFactor_ = CurrentJumpBlendFactor
+                              while CurrentJumpBlendFactor_ <= 1.0 do
+                                        CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
+                                                  CurrentJumpBlendFactor = CurrentJumpBlendFactor + 0.1
+                                                  ShouldListenToJumpEvent = false
+                                        end), Frame)
+                                        CurrentJumpBlendFactor_ = CurrentJumpBlendFactor_ + 0.1
                                         Frame = Frame + 1
                               end
-                              CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                                        FireModeFactor = 1.0
-                                        ShouldListenToEvents = true
-                              end), Frame)
-                    elseif FireModeFactor == 1.0 then
-                              local FireModeFactor_ = FireModeFactor
-                              while FireModeFactor_ >= 0.0 do
+
+                              while CurrentJumpBlendFactor_ >= 0.0 do
                                         CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                                                  FireModeFactor = FireModeFactor - 0.1
-                                                  ShouldListenToEvents = false
+                                                  CurrentJumpBlendFactor = CurrentJumpBlendFactor - 0.1
+                                                  ShouldListenToJumpEvent = false
                                         end), Frame)
-                                        FireModeFactor_ = FireModeFactor_ - 0.1
+                                        CurrentJumpBlendFactor_ = CurrentJumpBlendFactor_ - 0.1
                                         Frame = Frame + 1
                               end
+
                               CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                                        FireModeFactor = 0.0
-                                        ShouldListenToEvents = true
+                                        CurrentJumpBlendFactor = 0
+                                        ShouldListenToJumpEvent = true
                               end), Frame)
                     end
           end
@@ -232,13 +301,26 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
                               Mechanics.RotateCesiumRight()
                               ShouldUpdate = true
                     end
+                    if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_W) then
+                              Mechanics.MoveAimerUp()
+                              ShouldUpdate = true
+                    end
+                    if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_S) then
+                              Mechanics.MoveAimerDown()
+                              ShouldUpdate = true
+                    end
                     if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_F) then
-                              Mechanics.StartFireMode()
+                              Mechanics.SwitchFireMode()
+                              ShouldUpdate = true
+                    end
+                    if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_SPACE) and ShouldListenToJumpEvent then
+                              Mechanics.JumpCesium()
                               ShouldUpdate = true
                     end
                     if ShouldListenToCameraEvents then
                               if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_C) then
                                         Mechanics.SwitchCameraView()
+                                        ShouldUpdate = true
                               end
                     end
           end
@@ -247,11 +329,30 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
           cylinderObject:SetParent(planeObject)
           aimerObject:SetParent(cesiumObject)
           Mechanics.PutCameraAtCesium()
-          CesiumModelGLTF:BlendCombineAnimation(0.01,
+
+          CesiumModelGLTF:UpdateAnimation(StillAnimationIndex, 0.01, true)
+          CesiumModelGLTF:UpdateBlendCombineAnimation(0.1,
                     WalkAnimationIndex,
-                    StillAnimationIndex,
-                    CurrentStillWalkBlendFactor,
-                    true)
+                    1 - CurrentStillWalkBlendFactor,
+                    true,
+                    true
+          )
+          CesiumModelGLTF:UpdateBlendCombineAnimation(0.1,
+                    JumpAnimationIndex,
+                    CurrentJumpBlendFactor,
+                    true,
+                    true
+          )
+
+          CesiumModelGLTF:UpdateBlendCombineAnimation(0.1,
+                    AimAnimationIndex,
+                    FireModeFactor,
+                    false,
+                    true
+          )
+
+
+          --print(CurrentJumpBlendFactor)
           Uniform:UpdateByGLTFAnimation(CesiumModelGLTF)
           local ShadowCastingObjects = inmt:Get("ShadowCastingObjects")
           ShadowCastingObjects[cesiumId + 1]:SetParent(planeObject)
@@ -266,4 +367,7 @@ MechanicsUpdate = function(e, inWorld3d, inmt)
           ShadowCastingObjects[cesiumId + 2].mScale = cylinderObject.mScale
           ShadowCastingObjects[cesiumId + 2].mMatrix = cylinderObject.mMatrix
           CallBuffer.Update()
+          if not IsLoaded then
+                    IsLoaded = true
+          end
 end
