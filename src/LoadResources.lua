@@ -487,7 +487,6 @@ function LoadResources(mt, inWorld3d)
         Resourcesmt.AddObject(OpaqueObjects, mAimerCubeId, -1, aimerUniformIndex, basicTexturedSimple3dIndex)
         CesiumUniform:UpdateByGLTFAnimation(GLTFModelCesium, 0.0, 0, true)
 
-        Jmath.PrintMatrix(OpaqueObjects[1].mMatrix)
         mtMt:Inject("OpaqueObjects", OpaqueObjects)
         Resourcesmt.AddObject(ShadowCastingObjects, CesiumId, -1, shadowUniformIndex, shadowOffscreenSimple3dIndex)
         Resourcesmt.AddObject(ShadowCastingObjects, mCylinderId, -1, -1, basic3dForOffscreenIndex)
