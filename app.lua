@@ -1,3 +1,4 @@
-require "src.Samprahar"
+-- require "src.Samprahar"
 
--- require "src.Refactor.Samprahar"
+require "src.Refactor.Samprahar"
+Engine.mt:Wait()

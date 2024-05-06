@@ -106,4 +106,7 @@
           "notebook.output.fontSize": 10,
           "workbench.layoutControl.enabled": false,
           "workbench.panel.defaultLocation": "right",
+          "Lua.diagnostics.disable": [
+                    "undefined-global"
+          ],
 }

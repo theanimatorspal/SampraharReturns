@@ -10,71 +10,68 @@ Spr.SetupBasicShaders = function(inShouldLoad)
     Spr.shadowed3dIndex = Spr.world3d:AddSimple3D(Engine.i, Spr.w)
     Spr.shadowedTexture3dIndex = Spr.world3d:AddSimple3D(Engine.i, Spr.w)
 
-    Spr.ShouldLoad = false
-    if (inShouldLoad) then
-        Spr.ShouldLoad = inShouldLoad
-    end
-end
-
-Spr.CompileShaders = function()
-    local Functions = {
-        function()
-            local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.basic3dIndex))
-            Simple3D:Compile(Engine.i, Spr.w, "res/cache/basic3dIndex.glsl", Spr.Basic3dV, Spr.Basic3dF, Spr
-                .BasicCompute, Spr.ShouldLoad)
-            --Engine.mt:Inject("__mtxBasic3dIndex", true)
-        end,
-        function()
-            local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.basicTextured3dIndex))
-            Simple3D:Compile(Engine.i, Spr.w, "res/cache/basic3dIndex.glsl", Spr.Basic3dV, Spr.Basic3dFTextured,
-                Spr.BasicCompute, Spr.ShouldLoad)
-            --Engine.mt:Inject("__mtxBasicTextured3dIndex", true)
-        end,
-        function()
-            local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.skinned3dIndex))
-            Simple3D:Compile(Engine.i, Spr.w, "res/cache/basic3dIndex.glsl", Spr.Skinning3dV(), Spr.PBRBasic3dFragment,
-                Spr.BasicCompute, Spr.ShouldLoad)
-            --Engine.mt:Inject("__mtxSkinned3dIndex", true)
-        end,
-        function()
-            local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.skybox3dIndex))
-            Simple3D:Compile(Engine.i, Spr.w, "res/cache/basic3dIndex.glsl", Spr.Skybox3dV, Spr.Skybox3dF,
-                Spr.BasicCompute, Spr.ShouldLoad)
-            --Engine.mt:Inject("__mtxSkybox3dIndex", true)
-        end,
-        function()
-            local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.basicShadow3dIndex))
-            Simple3D:Compile(Engine.i, Spr.w, "res/cache/basic3dIndex.glsl", Spr.Basic3dVShadow, Spr.Basic3dF,
-                Spr.BasicCompute, Spr.ShouldLoad)
-            --Engine.mt:Inject("__mtxBasicShadow3dIndex", true)
-        end,
-        function()
-            local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.shadowSkinned3dIndex))
-            Simple3D:Compile(Engine.i, Spr.w, "res/cache/basic3dIndex.glsl", Spr.Skinning3dV("Shadow"), Spr.Basic3dF,
-                Spr.BasicCompute, Spr.ShouldLoad)
-            --Engine.mt:Inject("__mtxShadowSkinned3dIndex", true)
-        end,
-        function()
-            local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.shadowed3dIndex))
-            Simple3D:Compile(Engine.i, Spr.w, "res/cache/basic3dIndex.glsl", Spr.Shadowed3dV, Spr.Shadowed3dF,
-                Spr.BasicCompute, Spr.ShouldLoad)
-            --Engine.mt:Inject("__mtxShadowSkinned3dIndex", true)
-        end,
-        function()
-            local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.shadowedTexture3dIndex))
-            Simple3D:Compile(Engine.i, Spr.w, "res/cache/basic3dIndex.glsl", Spr.Shadowed3dV, Spr.Shadowed3dFTextured,
-                Spr.BasicCompute, Spr.ShouldLoad)
-            --Engine.mt:Inject("__mtxShadowSkinned3dIndex", true)
-        end
+    Spr.ShaderInfos = {
+        { index = Spr.basic3dIndex,           v = Spr.Basic3dV,              f = Spr.Basic3dF,            c = Spr.BasicCompute, n = "__MtBasci3dIndex",           cacheName = "res/cache/basic3dIndex.glsl" },
+        { index = Spr.basicTextured3dIndex,   v = Spr.Basic3dV,              f = Spr.Basic3dFTextured,    c = Spr.BasicCompute, n = "__MtBasicTextured3dIndex",   cacheName = "res/cache/basicTextured3dIndex.glsl" },
+        { index = Spr.skinned3dIndex,         v = Spr.Skinning3dV(),         f = Spr.PBRBasic3dFragment,  c = Spr.BasicCompute, n = "__MtSkinned3dIndex",         cacheName = "res/cache/skinned3dIndex.glsl" },
+        { index = Spr.skybox3dIndex,          v = Spr.Skybox3dV,             f = Spr.Skybox3dF,           c = Spr.BasicCompute, n = "__MtSkybox3dIndex",          cacheName = "res/cache/skybox3dIndex.glsl" },
+        { index = Spr.basicShadow3dIndex,     v = Spr.Basic3dVShadow,        f = Spr.Basic3dF,            c = Spr.BasicCompute, n = "__MtBasicShadow3dIndex",     cacheName = "res/cache/basicShadow3dIndex.glsl" },
+        { index = Spr.shadowSkinned3dIndex,   v = Spr.Skinning3dV("Shadow"), f = Spr.Basic3dF,            c = Spr.BasicCompute, n = "__MtShadowSkinned3dIndex",   cacheName = "res/cache/shadowSkinned3dIndex.glsl" },
+        { index = Spr.shadowed3dIndex,        v = Spr.Shadowed3dV,           f = Spr.Shadowed3dF,         c = Spr.BasicCompute, n = "__MtShadowed3dIndex",        cacheName = "res/cache/shadowed3dIndex.glsl" },
+        { index = Spr.shadowedTexture3dIndex, v = Spr.Shadowed3dV,           f = Spr.Shadowed3dFTextured, c = Spr.BasicCompute, n = "__MtShadowedTexture3dIndex", cacheName = "res/cache/shadowedTexture3dIndex.glsl" }
     }
 
-    -- for _, value in ipairs(Functions) do
-    Engine.mt:AddJobF(Functions[1])
-    Engine.mt:AddJobF(Functions[2])
-    Engine.mt:AddJobF(Functions[3])
-    Engine.mt:AddJobF(Functions[4])
-    -- end
+    Spr.ShouldLoad = false
+    Spr.GlobalBindingSet = 0
+    Spr.LocalBindingSet = 1
+    if inShouldLoad then Spr.ShouldLoad = inShouldLoad end
 end
+
+
+
+Spr.CompileShaders = function()
+    Engine.mt:AddJobF(function()
+        local Si = Spr.ShaderInfos[1]
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+    end)
+    Engine.mt:AddJobF(function()
+        local Si = Spr.ShaderInfos[2]
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+    end)
+    Engine.mt:AddJobF(function()
+        local Si = Spr.ShaderInfos[3]
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+    end)
+    Engine.mt:AddJobF(function()
+        local Si = Spr.ShaderInfos[4]
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+    end)
+    Engine.mt:AddJobF(function()
+        local Si = Spr.ShaderInfos[5]
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+    end)
+    Engine.mt:AddJobF(function()
+        local Si = Spr.ShaderInfos[6]
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+    end)
+    Engine.mt:AddJobF(function()
+        local Si = Spr.ShaderInfos[7]
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+    end)
+    Engine.mt:AddJobF(function()
+        local Si = Spr.ShaderInfos[8]
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+    end)
+end
+
+Spr.CompileAndInject = function(index, vertexShader, fragmentShader, computeShader, inMutexName, inCacheName,
+                                shouldLoad)
+    local Simple3D = Spr.world3d:GetSimple3D(math.floor(index))
+    Simple3D:Compile(Engine.i, Spr.w, inCacheName, vertexShader, fragmentShader, computeShader,
+        shouldLoad)
+    Engine.mt:InjectToGate(inMutexName, true, StateId)
+end
+
 
 Spr.BasicCompute = Engine.Shader()
     .Header(450)
