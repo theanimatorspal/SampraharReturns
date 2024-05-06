@@ -15,8 +15,8 @@ Spr.SetupBasicShaders = function(inShouldLoad)
         { index = Spr.basicTextured3dIndex,   v = Spr.Basic3dV,              f = Spr.Basic3dFTextured,    c = Spr.BasicCompute, n = "__MtBasicTextured3dIndex",   cacheName = "res/cache/basicTextured3dIndex.glsl" },
         { index = Spr.skinned3dIndex,         v = Spr.Skinning3dV(),         f = Spr.PBRBasic3dFragment,  c = Spr.BasicCompute, n = "__MtSkinned3dIndex",         cacheName = "res/cache/skinned3dIndex.glsl" },
         { index = Spr.skybox3dIndex,          v = Spr.Skybox3dV,             f = Spr.Skybox3dF,           c = Spr.BasicCompute, n = "__MtSkybox3dIndex",          cacheName = "res/cache/skybox3dIndex.glsl" },
-        { index = Spr.basicShadow3dIndex,     v = Spr.Basic3dVShadow,        f = Spr.Basic3dF,            c = Spr.BasicCompute, n = "__MtBasicShadow3dIndex",     cacheName = "res/cache/basicShadow3dIndex.glsl" },
-        { index = Spr.shadowSkinned3dIndex,   v = Spr.Skinning3dV("Shadow"), f = Spr.Basic3dF,            c = Spr.BasicCompute, n = "__MtShadowSkinned3dIndex",   cacheName = "res/cache/shadowSkinned3dIndex.glsl" },
+        { index = Spr.basicShadow3dIndex,     v = Spr.Basic3dVShadow,        f = Spr.Basic3dF,            c = Spr.BasicCompute, n = "__MtBasicShadow3dIndex",     cacheName = "res/cache/basicShadow3dIndex.glsl",    shadow = true },
+        { index = Spr.shadowSkinned3dIndex,   v = Spr.Skinning3dV("Shadow"), f = Spr.Basic3dF,            c = Spr.BasicCompute, n = "__MtShadowSkinned3dIndex",   cacheName = "res/cache/shadowSkinned3dIndex.glsl",  shadow = true },
         { index = Spr.shadowed3dIndex,        v = Spr.Shadowed3dV,           f = Spr.Shadowed3dF,         c = Spr.BasicCompute, n = "__MtShadowed3dIndex",        cacheName = "res/cache/shadowed3dIndex.glsl" },
         { index = Spr.shadowedTexture3dIndex, v = Spr.Shadowed3dV,           f = Spr.Shadowed3dFTextured, c = Spr.BasicCompute, n = "__MtShadowedTexture3dIndex", cacheName = "res/cache/shadowedTexture3dIndex.glsl" }
     }
@@ -30,45 +30,55 @@ end
 
 
 Spr.CompileShaders = function()
+    local Si = Spr.ShaderInfos[1]
     Engine.mt:AddJobF(function()
         local Si = Spr.ShaderInfos[1]
-        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad, Si.shadow)
     end)
     Engine.mt:AddJobF(function()
         local Si = Spr.ShaderInfos[2]
-        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad, Si.shadow)
     end)
     Engine.mt:AddJobF(function()
         local Si = Spr.ShaderInfos[3]
-        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad, Si.shadow)
     end)
     Engine.mt:AddJobF(function()
         local Si = Spr.ShaderInfos[4]
-        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad, Si.shadow)
     end)
     Engine.mt:AddJobF(function()
         local Si = Spr.ShaderInfos[5]
-        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad, Si.shadow)
     end)
     Engine.mt:AddJobF(function()
         local Si = Spr.ShaderInfos[6]
-        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad, Si.shadow)
     end)
     Engine.mt:AddJobF(function()
         local Si = Spr.ShaderInfos[7]
-        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad, Si.shadow)
     end)
     Engine.mt:AddJobF(function()
         local Si = Spr.ShaderInfos[8]
-        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad)
+        Spr.CompileAndInject(Si.index, Si.v, Si.f, Si.c, Si.n, Si.cacheName, Spr.ShouldLoad, Si.shadow)
     end)
 end
 
 Spr.CompileAndInject = function(index, vertexShader, fragmentShader, computeShader, inMutexName, inCacheName,
-                                shouldLoad)
+                                shouldLoad, inShadow)
     local Simple3D = Spr.world3d:GetSimple3D(math.floor(index))
-    Simple3D:Compile(Engine.i, Spr.w, inCacheName, vertexShader, fragmentShader, computeShader,
-        shouldLoad)
+    if (inShadow) then
+        print("SHADOWOO", inCacheName)
+        Simple3D:CompileForShadowOffscreen(
+            Engine.i, Spr.w, inCacheName,
+            vertexShader,
+            fragmentShader, computeShader, false
+        )
+    else
+        Simple3D:Compile(Engine.i, Spr.w, inCacheName, vertexShader, fragmentShader, computeShader,
+            shouldLoad)
+    end
     Engine.mt:InjectToGate(inMutexName, true, StateId)
 end
 
@@ -394,3 +404,58 @@ Spr.PBRBasic3dFragment = Engine.Shader()
         ]])
     .GlslMainEnd()
     .NewLine().str
+
+
+--[========================================================================================[
+    COMPUTE SHADERS (CUSTOM PAINTER)
+--]========================================================================================]
+Spr.RoundedRectangleCShader = Jkrmt.Shader()
+    .Header(450)
+    .CInvocationLayout(1, 1, 1)
+    .uImage2D()
+    .ImagePainterPush()
+    .GlslMainBegin()
+    .ImagePainterAssist()
+    .Append([[
+
+          vec2 center = vec2(push.mPosDimen.x, push.mPosDimen.y);
+          vec2 hw = vec2(push.mPosDimen.z, push.mPosDimen.w);
+          float radius = push.mParam.x;
+          vec2 Q = abs(xy - center) - hw;
+
+          float color = distance(max(Q, vec2(0.0)), vec2(0.0)) + min(max(Q.x, Q.y), 0.0) - radius;
+          color = smoothstep(-0.05, 0.05, -color);
+
+          vec4 old_color = imageLoad(storageImage, to_draw_at);
+          vec4 final_color = vec4(push.mColor.x * color, push.mColor.y * color, push.mColor.z * color, push.mColor.w * color);
+          final_color = mix(final_color, old_color, 1 - color);
+          imageStore(storageImage, to_draw_at, final_color);
+              ]])
+    .GlslMainEnd()
+    .NewLine()
+    .str
+
+Spr.AimerCShader = Jkrmt.Shader()
+    .Header(450)
+    .CInvocationLayout(1, 1, 1)
+    .uImage2D()
+    .ImagePainterPush()
+    .GlslMainBegin()
+    .ImagePainterAssist()
+    .Append([[
+          vec2 center = vec2(push.mPosDimen.x, push.mPosDimen.y);
+          vec2 hw = vec2(push.mPosDimen.z, push.mPosDimen.w);
+          float radius = push.mParam.x;
+          vec2 Q = abs(xy - center) - hw;
+
+          float color = distance(center, xy) - radius;
+          //color = smoothstep(-0.5, 0.5, -color);
+
+          vec4 final_color = vec4(push.mColor.x, push.mColor.y, push.mColor.z, push.mColor.w * color);
+          final_color.w = sin(color * 10 + push.mParam.z);
+          imageStore(storageImage, to_draw_at, final_color);
+
+    ]])
+    .GlslMainEnd()
+    .NewLine()
+    .str
