@@ -101,17 +101,26 @@ Spr.AssetsLoad = function()
           while not Engine.mt:GetFromGateToThread("__MtPlaneObjGround", -1) do end
           while not Engine.mt:GetFromGateToThread("__MtAimerObj", -1) do end
           local BindingIndex = 4 -- Shadow xan ta
-          while not Engine.mt:GetFromGateToThread("__MtP", -1) do end
           local PlaneUniform = Spr.world3d:GetUniform3D(Spr.PlaneComputeTextureUniformIndex)
-          PlaneUniform:AddTextureFromShapeImage(Spr.Wid.s.handle, Spr.PlaneTextureComputeImage.sampledImage, BindingIndex,
+          PlaneUniform:AddTextureFromShapeImage(Spr.Wid.s.handle,
+                    math.floor(Spr.PlaneTextureComputeImage.sampledImage.mId), BindingIndex,
                     1)
           Spr.DrawPlatform()
 
           BindingIndex = 3
           local aimerUniform = Spr.world3d:GetUniform3D(Spr.AimerUniformIndex)
-          aimerUniform:AddTextureFromShapeImage(WidUI.s.handle, Spr.AimerTextureComputeImage.sampledImage, BindingIndex,
+          aimerUniform:AddTextureFromShapeImage(Spr.Wid.s.handle,
+                    math.floor(Spr.AimerTextureComputeImage.sampledImage.mId),
+                    BindingIndex,
                     1)
           Spr.DrawToAimer(1)
+
+          Spr.StepsSound = Jkr.Sound("res/audio/steps.wav")
+          Spr.StepsSound:SetupAudioDevice()
+          Spr.JumpSound = Jkr.Sound("res/audio/jump.wav")
+          Spr.JumpSound:SetupAudioDevice()
+          Spr.AimSound = Jkr.Sound("res/audio/aim.wav")
+          Spr.AimSound:SetupAudioDevice()
 end
 
 Spr.AssetsUpdate = function()

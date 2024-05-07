@@ -1,7 +1,7 @@
 require "JkrGUIv2.Engine.Engine"
 require "JkrGUIv2.Engine.Shader"
 Spr = {}
-Engine:Load()
+Engine:Load(Validation)
 Spr.w = Jkr.CreateWindow(Engine.i, "Hello", vec2(900, 480), 3)
 Spr.buffer3d = Jkr.CreateShapeRenderer3D(Engine.i, Spr.w)
 Spr.buffer3d:CheckAndResize(50000, 50000)
