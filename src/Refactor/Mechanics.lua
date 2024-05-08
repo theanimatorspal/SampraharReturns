@@ -1,7 +1,17 @@
 Spr.Mechanics = {}
 
+local GravityY = -10.0
+local CesiumJumpVY = 10
+
 Spr.MechanicsLoad = function()
 
+end
+
+local function MechanicsCopyTransformations(inFrom, inTo)
+    inTo.mTranslation = inFrom.mTranslation
+    inTo.mRotation = inFrom.mRotation
+    inTo.mScale = inFrom.mScale
+    inTo.mMatrix = inFrom.mMatrix
 end
 
 local CallBuffer = Jkr.CreateCallBuffers()
@@ -32,7 +42,7 @@ local aimerObject = 0
 local TranslationVector = 0
 
 local CesiumModelGLTF = 0
-local Uniform = 0
+local CesiumUniform = 0
 local cesiumId = 0
 local objects = 0
 
@@ -65,20 +75,32 @@ local GetTranslationVectorFromYRotation = function(inQuad)
     return vec3(dX, 0, dZ)
 end
 
+local cesiumObject = {}
+local skyboxObject = {}
+local planeGroundObject = {}
+local aimerObject = {}
+local targetCubeBigObject = {}
+local targetCubeSmallObject = {}
+
 Spr.MechanicsUpdate = function()
     CesiumMoving = false
-    CesiumModelGLTF = Spr.world3d:GetGLTFModel(0)
-    Uniform = Spr.world3d:GetUniform3D(1)
-    cesiumObject = Spr.OpaqueObjects[Spr.CesiumObjIndex]
-    skyboxObject = Spr.BackgroundObjects[Spr.SkyboxObjIndex]
-    planeObject = Spr.TransparentObjects[Spr.PlaneObjIndex]
-    aimerObject = Spr.TransparentObjects[Spr.AimerObjIndex]
-    aimerObject.mScale = vec3(0.3, 0.3, 0.3) * FireModeFactor
-    aimerObject.mRotation = aimerObject.mRotation:Rotate_deg(30, vec3(1, 0, 0))
+    CesiumModelGLTF = Spr.world3d:GetGLTFModel(Spr.CesiumGLTFIndex)
+    CesiumUniform = Spr.world3d:GetUniform3D(Spr.CesiumSkinnedUniformIndex)
     if not IsLoaded then
+        cesiumObject = Spr.OpaqueObjects[Spr.CesiumObjIndex]
+        skyboxObject = Spr.BackgroundObjects[Spr.SkyboxObjIndex]
+        planeGroundObject = Spr.TransparentObjects[Spr.PlaneObjIndex]
+        aimerObject = Spr.TransparentObjects[Spr.AimerObjIndex]
+        targetCubeBigObject = Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex]
+        targetCubeSmallObject = Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex]
         aimerObject.mTranslation = aimerObject.mTranslation + vec3(3, -0.5, 1)
         aimerObject.mRotation = aimerObject.mRotation:Rotate_deg(90, vec3(0, 0, 1))
+        targetCubeBigObject.mTranslation = vec3(0, 2, 10)
+        targetCubeSmallObject.mTranslation = vec3(0, 4, 10)
+        targetCubeSmallObject.mScale = vec3(0.5)
     end
+    aimerObject.mScale = vec3(0.3, 0.3, 0.3) * FireModeFactor
+    aimerObject.mRotation = aimerObject.mRotation:Rotate_deg(30, vec3(1, 0, 0))
 
     TranslationVector = GetTranslationVectorFromYRotation(cesiumObject.mRotation)
 
@@ -89,7 +111,7 @@ Spr.MechanicsUpdate = function()
     end
 
     -- JUMP MECHANICS
-    cesiumObject.mTranslation.y = CurrentJumpBlendFactor * 2
+    cesiumObject.mTranslation.y = CurrentJumpBlendFactor
 
 
     if not IsLoaded then
@@ -237,32 +259,28 @@ Spr.MechanicsUpdate = function()
         end
 
         Spr.JumpCesium = function()
-            local Frame = 1
+            local vy = 10
+            local g = -10
             Spr.JumpSound:Play()
-            local CurrentJumpBlendFactor_ = CurrentJumpBlendFactor
-            while CurrentJumpBlendFactor_ < 1.0 do
+            local function __Jump()
                 CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                    CurrentJumpBlendFactor = CurrentJumpBlendFactor + 0.1
+                    vy = vy + g * 0.1
+                    CurrentJumpBlendFactor = CurrentJumpBlendFactor + vy * 0.1
+                    Frame = Frame + 1
                     ShouldListenToJumpEvent = false
+                    if CurrentJumpBlendFactor >= 0 then
+                        __Jump()
+                    else
+                        CurrentJumpBlendFactor = 0
+                        ShouldListenToJumpEvent = true
+                        vy = 10
+                        g = -10
+                        Spr.JumpSound:Pause()
+                        Frame = 1
+                    end
                 end), Frame)
-                CurrentJumpBlendFactor_ = CurrentJumpBlendFactor_ + 0.1
-                Frame = Frame + 1
             end
-
-            while CurrentJumpBlendFactor_ >= 0.0 do
-                CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                    CurrentJumpBlendFactor = CurrentJumpBlendFactor - 0.1
-                    ShouldListenToJumpEvent = false
-                end), Frame)
-                CurrentJumpBlendFactor_ = CurrentJumpBlendFactor_ - 0.1
-                Frame = Frame + 1
-            end
-
-            CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
-                CurrentJumpBlendFactor = 0
-                ShouldListenToJumpEvent = true
-                Spr.JumpSound:Pause()
-            end), Frame)
+            __Jump()
         end
     end
 
@@ -320,7 +338,7 @@ Spr.MechanicsUpdate = function()
         Spr.AimSound:Play()
     end
 
-    cesiumObject:SetParent(planeObject)
+    cesiumObject:SetParent(planeGroundObject)
     aimerObject:SetParent(cesiumObject)
     Spr.PutCameraAtCesium()
 
@@ -331,9 +349,13 @@ Spr.MechanicsUpdate = function()
         true,
         true
     )
+    local Jumpblendfactor = CurrentJumpBlendFactor
+    if CurrentJumpBlendFactor > 1 then
+        Jumpblendfactor = 1
+    end
     CesiumModelGLTF:UpdateBlendCombineAnimation(0.1,
         JumpAnimationIndex,
-        CurrentJumpBlendFactor,
+        Jumpblendfactor,
         false,
         true
     )
@@ -345,12 +367,11 @@ Spr.MechanicsUpdate = function()
         true
     )
 
-    Uniform:UpdateByGLTFAnimation(CesiumModelGLTF)
-    Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex]:SetParent(planeObject)
-    Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex].mTranslation = cesiumObject.mTranslation
-    Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex].mRotation = cesiumObject.mRotation
-    Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex].mScale = cesiumObject.mScale
-    Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex].mMatrix = cesiumObject.mMatrix
+    CesiumUniform:UpdateByGLTFAnimation(CesiumModelGLTF)
+    Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex]:SetParent(planeGroundObject)
+    MechanicsCopyTransformations(cesiumObject, Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex])
+    MechanicsCopyTransformations(targetCubeBigObject, Spr.ShadowCastingObjects[Spr.TargetBigCubeShadowObjIndex])
+    MechanicsCopyTransformations(targetCubeSmallObject, Spr.ShadowCastingObjects[Spr.TargetSmallCubeShadowObjIndex])
 
     CallBuffer.Update()
     if not IsLoaded then

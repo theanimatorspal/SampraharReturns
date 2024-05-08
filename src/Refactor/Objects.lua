@@ -21,6 +21,8 @@ Spr.SetupObjects = function()
     ]==================================================================================]
     -- OPAQUE
     Spr.OpaqueObjects = Spr.world3d:MakeExplicitObjectsVector()
+    Spr.TargetBigCubeObjIndex = Spr.AddObject(Spr.OpaqueObjects)
+    Spr.TargetSmallCubeObjIndex = Spr.AddObject(Spr.OpaqueObjects)
     Spr.CesiumObjIndex = Spr.AddObject(Spr.OpaqueObjects)
 
     -- BACKGROUND
@@ -29,6 +31,8 @@ Spr.SetupObjects = function()
 
     -- SHADOW CASTING
     Spr.ShadowCastingObjects = Spr.world3d:MakeExplicitObjectsVector()
+    Spr.TargetBigCubeShadowObjIndex = Spr.AddObject(Spr.ShadowCastingObjects)
+    Spr.TargetSmallCubeShadowObjIndex = Spr.AddObject(Spr.ShadowCastingObjects)
     Spr.CesiumShadowObjIndex = Spr.AddObject(Spr.ShadowCastingObjects)
 
     -- TRANSPARENT
@@ -44,10 +48,10 @@ Spr.SetupObjects = function()
         Uniforms
     ]==================================================================================]
     Spr.GlobalUniformIndex = Spr.world3d:AddUniform3D(Engine.i)
-    Spr.SkinnedUniformIndex = Spr.world3d:AddUniform3D(Engine.i)
+    Spr.CesiumSkinnedUniformIndex = Spr.world3d:AddUniform3D(Engine.i)
     Spr.SkyboxUniformIndex = Spr.world3d:AddUniform3D(Engine.i)
     Spr.PlaneUniformIndex = Spr.world3d:AddUniform3D(Engine.i)
-    Spr.ShadowUniformIndex = Spr.world3d:AddUniform3D(Engine.i)
+    Spr.CesiumShadowUniformIndex = Spr.world3d:AddUniform3D(Engine.i)
     Spr.ShadowedUniformIndex = Spr.world3d:AddUniform3D(Engine.i)
     Spr.PlaneComputeTextureUniformIndex = Spr.world3d:AddUniform3D(Engine.i)
     Spr.AimerUniformIndex = Spr.world3d:AddUniform3D(Engine.i)
@@ -106,7 +110,7 @@ Spr.LoadObjects = function()
     Engine.mt:AddJobF(
         function()
             while not Engine.mt:GetFromGateToThread("__MtSkinned3dIndex", -1) do end
-            local Uniform = Spr.world3d:GetUniform3D(math.floor(Spr.SkinnedUniformIndex))
+            local Uniform = Spr.world3d:GetUniform3D(math.floor(Spr.CesiumSkinnedUniformIndex))
             local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.skinned3dIndex))
             while not Engine.mt:GetFromGateToThread("__MtCesiumId", StateId) do end
             local Model = Spr.world3d:GetGLTFModel(math.floor(Spr.CesiumGLTFIndex))
@@ -118,7 +122,7 @@ Spr.LoadObjects = function()
             Spr.OpaqueObjects[Spr.CesiumObjIndex].mAssociatedModel = math.floor(Spr.CesiumGLTFIndex)
             Spr.OpaqueObjects[Spr.CesiumObjIndex].mAssociatedSimple3D = math.floor(Spr.skinned3dIndex)
             Spr.OpaqueObjects[Spr.CesiumObjIndex].mAssociatedUniform = math.floor(Spr
-                .SkinnedUniformIndex)
+                .CesiumSkinnedUniformIndex)
             local NodeIndices = Model:GetNodeIndexByMeshIndex(0)
             Spr.OpaqueObjects[Spr.CesiumObjIndex].mMatrix = Model:GetNodeMatrixByIndex(NodeIndices[1])
             print("Cesium Object Done")
@@ -157,6 +161,7 @@ Spr.LoadObjects = function()
             Uniform:Build(Simple3D)
             Spr.world3d:AddShadowMapToUniform3D(Spr.w, math.floor(Spr.ShadowedUniformIndex),
                 math.floor(Spr.LocalBindingSet))
+            Engine.mt:InjectToGate("__MtShadowed3dUniformDone", true)
             print("Shadowed Uniform Done")
         end
     )
@@ -186,19 +191,47 @@ Spr.LoadObjects = function()
         end
     )
 
-    --[======================================================================================================================[
-        SHADOW CASTING OBJECTS
-    ]======================================================================================================================]
+    --[======[
+        Target CUBEs
+    --]======]
+    Engine.mt:AddJobF(
+        function()
+            while not Engine.mt:GetFromGateToThread("__MtShadowed3dUniformDone", StateId) do end
+            local BigCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
+            local BigCubeId = Spr.buffer3d:Add(BigCube, vec3(0, 0, 0))
+            Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex].mId = math.floor(BigCubeId)
+            Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex].mAssociatedModel = math.floor(-1)
+            Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex].mAssociatedSimple3D = math.floor(Spr.shadowed3dIndex)
+            Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex].mAssociatedUniform = math.floor(Spr.ShadowedUniformIndex)
 
+            Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex].mId = math.floor(BigCubeId)
+            Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex].mAssociatedModel = math.floor(-1)
+            Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex].mAssociatedSimple3D = math.floor(Spr.shadowed3dIndex)
+            Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex].mAssociatedUniform = math.floor(Spr.ShadowedUniformIndex)
+
+            Spr.ShadowCastingObjects[Spr.TargetBigCubeObjIndex].mId = math.floor(BigCubeId)
+            Spr.ShadowCastingObjects[Spr.TargetBigCubeObjIndex].mAssociatedModel = math.floor(-1)
+            Spr.ShadowCastingObjects[Spr.TargetBigCubeObjIndex].mAssociatedSimple3D = math.floor(Spr.basicShadow3dIndex)
+            Spr.ShadowCastingObjects[Spr.TargetBigCubeObjIndex].mAssociatedUniform = math.floor(-1)
+
+            Spr.ShadowCastingObjects[Spr.TargetSmallCubeObjIndex].mId = math.floor(BigCubeId)
+            Spr.ShadowCastingObjects[Spr.TargetSmallCubeObjIndex].mAssociatedModel = math.floor(-1)
+            Spr.ShadowCastingObjects[Spr.TargetSmallCubeObjIndex].mAssociatedSimple3D = math.floor(Spr
+                .basicShadow3dIndex)
+            Spr.ShadowCastingObjects[Spr.TargetSmallCubeObjIndex].mAssociatedUniform = math.floor(-1)
+        end
+    )
+
+    -- TODO Move this to Cesium
     Engine.mt:AddJobF(
         function()
             while not Engine.mt:GetFromGateToThread("__MtShadowSkinned3dIndex", StateId) do end
             while not Engine.mt:GetFromGateToThread("__MtCesiumId", StateId) do end
             while not Engine.mt:GetFromGateToThread("__MtCesiumObjLoaded", StateId) do end
             local CesiumId = Engine.mt:GetFromGateToThread("__MtCesiumId", StateId)
-            local Uniform = Spr.world3d:GetUniform3D(math.floor(Spr.ShadowUniformIndex))
+            local Uniform = Spr.world3d:GetUniform3D(math.floor(Spr.CesiumShadowUniformIndex))
             local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.shadowSkinned3dIndex))
-            local CesiumSkinnedUniform = Spr.world3d:GetUniform3D(math.floor(Spr.SkinnedUniformIndex))
+            local CesiumSkinnedUniform = Spr.world3d:GetUniform3D(math.floor(Spr.CesiumSkinnedUniformIndex))
             local loadSkin = true
             local loadImages = true
             Uniform:Build(Simple3D)
@@ -206,7 +239,8 @@ Spr.LoadObjects = function()
                 math.floor(Spr.LocalBindingSet))
             Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex].mId = math.floor(CesiumId)
             Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex].mAssociatedModel = -1
-            Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex].mAssociatedUniform = math.floor(Spr.ShadowUniformIndex)
+            Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex].mAssociatedUniform = math.floor(Spr
+                .CesiumShadowUniformIndex)
             Spr.ShadowCastingObjects[Spr.CesiumShadowObjIndex].mAssociatedSimple3D = math.floor(Spr.shadowSkinned3dIndex)
             print("Cesium Shadow Done")
         end

@@ -69,7 +69,6 @@ Spr.CompileAndInject = function(index, vertexShader, fragmentShader, computeShad
                                 shouldLoad, inShadow)
     local Simple3D = Spr.world3d:GetSimple3D(math.floor(index))
     if (inShadow) then
-        print("SHADOWOO", inCacheName)
         Simple3D:CompileForShadowOffscreen(
             Engine.i, Spr.w, inCacheName,
             vertexShader,
@@ -277,7 +276,7 @@ Spr.Shadowed3dF = Engine.Shader()
     .Push()
     .Ubo()
     .LinearizeDepth()
-    .Define("ambient", "0.1")
+    .Define("ambient", "0.5")
     .Append([[
 
             float textureProj(vec4 shadowCoord, vec2 off)
