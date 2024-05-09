@@ -72,7 +72,7 @@ Spr.CompileAndInject = function(index, vertexShader, fragmentShader, computeShad
         Simple3D:CompileForShadowOffscreen(
             Engine.i, Spr.w, inCacheName,
             vertexShader,
-            fragmentShader, computeShader, false
+            fragmentShader, computeShader, shouldLoad
         )
     else
         Simple3D:Compile(Engine.i, Spr.w, inCacheName, vertexShader, fragmentShader, computeShader,

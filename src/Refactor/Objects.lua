@@ -84,13 +84,15 @@ Spr.LoadObjects = function()
             Uniform:Build(Simple3D)
             Spr.world3d:AddShadowMapToUniform3D(Spr.w, math.floor(Spr.PlaneComputeTextureUniformIndex),
                 math.floor(Spr.LocalBindingSet))
-            local PlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(20, 0.0001, 20))
+            local PlaneCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
             local PlaneCubeId = Spr.buffer3d:Add(PlaneCube, vec3(0, 0, 0))
             Spr.TransparentObjects[Spr.PlaneObjIndex].mId = math.floor(PlaneCubeId)
             Spr.TransparentObjects[Spr.PlaneObjIndex].mAssociatedModel = -1
             Spr.TransparentObjects[Spr.PlaneObjIndex].mAssociatedSimple3D = math.floor(Spr.shadowedTexture3dIndex)
             Spr.TransparentObjects[Spr.PlaneObjIndex].mAssociatedUniform = math.floor(Spr
                 .PlaneComputeTextureUniformIndex)
+            Spr.TransparentObjects[Spr.PlaneObjIndex].mBoundingBox.min = vec3(-1, -1, -1)
+            Spr.TransparentObjects[Spr.PlaneObjIndex].mBoundingBox.max = vec3(1, 1, 1)
             Engine.mt:InjectToGate("__MtPlaneObjGround", true)
             print("Ground Done")
         end
@@ -125,6 +127,7 @@ Spr.LoadObjects = function()
                 .CesiumSkinnedUniformIndex)
             local NodeIndices = Model:GetNodeIndexByMeshIndex(0)
             Spr.OpaqueObjects[Spr.CesiumObjIndex].mMatrix = Model:GetNodeMatrixByIndex(NodeIndices[1])
+            Spr.OpaqueObjects[Spr.CesiumObjIndex].mBoundingBox = Model:GetMeshesRef()[1].mBB
             print("Cesium Object Done")
             Engine.mt:InjectToGate("__MtCesiumObjLoaded", true)
         end
@@ -180,7 +183,7 @@ Spr.LoadObjects = function()
             Spr.world3d:AddShadowMapToUniform3D(Spr.w, math.floor(Spr.AimerUniformIndex),
                 math.floor(Spr.LocalBindingSet))
 
-            local AimerCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 0.0001, 1))
+            local AimerCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
             local AimerCubeId = Spr.buffer3d:Add(AimerCube, vec3(0, 0, 0))
             Spr.TransparentObjects[Spr.AimerObjIndex].mId = math.floor(AimerCubeId)
             Spr.TransparentObjects[Spr.AimerObjIndex].mAssociatedModel = -1
@@ -203,11 +206,15 @@ Spr.LoadObjects = function()
             Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex].mAssociatedModel = math.floor(-1)
             Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex].mAssociatedSimple3D = math.floor(Spr.shadowed3dIndex)
             Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex].mAssociatedUniform = math.floor(Spr.ShadowedUniformIndex)
+            Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex].mBoundingBox.min = vec3(-1, -1, -1)
+            Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex].mBoundingBox.max = vec3(1, 1, 1)
 
             Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex].mId = math.floor(BigCubeId)
             Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex].mAssociatedModel = math.floor(-1)
             Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex].mAssociatedSimple3D = math.floor(Spr.shadowed3dIndex)
             Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex].mAssociatedUniform = math.floor(Spr.ShadowedUniformIndex)
+            Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex].mBoundingBox.min = vec3(-1, -1, -1)
+            Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex].mBoundingBox.max = vec3(1, 1, 1)
 
             Spr.ShadowCastingObjects[Spr.TargetBigCubeObjIndex].mId = math.floor(BigCubeId)
             Spr.ShadowCastingObjects[Spr.TargetBigCubeObjIndex].mAssociatedModel = math.floor(-1)
