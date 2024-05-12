@@ -14,36 +14,40 @@ local function MechanicsCopyTransformations(inFrom, inTo)
     inTo.mMatrix = inFrom.mMatrix
 end
 
-local CallBuffer = Jkr.CreateCallBuffers()
-local CurrentStillWalkBlendFactor = 0
-local CurrentJumpBlendFactor = 0
-local Frame = 1
-local CesiumMoving = false
+local CallBuffer                        = Jkr.CreateCallBuffers()
+local CurrentStillWalkBlendFactor       = 0
+local CurrentJumpBlendFactor            = 0
+local Frame                             = 1
+local CesiumMoving                      = false
 
-local CameraTarget = vec3(0, 0, 0)
-local CameraPosition = vec3(0, 5, -10)
-local ShouldListenToEvents = true
-local ShouldListenToCameraEvents = true
-local ShouldListenToJumpEvent = true
-local LocalCameraTarget = vec3(0, 0, 0)
-local LocalCameraPosition = vec3(0, 2, 0)
-local CesiumRotationSensitivity = 1
-local FireModeFactor = 0.0
-local IsLoaded = false
+local CameraTarget                      = vec3(0, 0, 0)
+local CameraPosition                    = vec3(0, 5, -10)
+local ShouldListenToEvents              = true
+local ShouldListenToCameraEvents        = true
+local ShouldListenToJumpEvent           = true
+local ShouldListenToAimerEvents         = true
+local LocalCameraTarget                 = vec3(0, 0, 0)
+local LocalCameraPosition               = vec3(0, 2, 0)
+local CesiumRotationSensitivity         = 1
+local FireModeFactor                    = 0.0
+local IsLoaded                          = false
 
-local FarCameraView = 0.0
-local NearCameraView = 1.0
-local TranslationVector = 0
+local FarCameraView                     = 0.0
+local NearCameraView                    = 1.0
+local TranslationVector                 = 0
 
-local CesiumModelGLTF = 0
-local CesiumUniform = 0
+local CesiumModelGLTF                   = 0
+local CesiumUniform                     = 0
 
-local CurrentFrame = 1
+local CurrentFrame                      = 1
 
-local WalkAnimationIndex = 0
-local StillAnimationIndex = 1
-local JumpAnimationIndex = 2
-local AimAnimationIndex = 3
+local WalkAnimationIndex                = 0
+local StillAnimationIndex               = 1
+local JumpAnimationIndex                = 2
+local AimAnimationIndex                 = 3
+local AimerRigidBodyIndex               = 3
+
+local WalkAnimationSpeed                = 0.1
 
 local GetTranslationVectorFromYRotation = function(inQuad)
     local rX = inQuad.x
@@ -67,57 +71,112 @@ local GetTranslationVectorFromYRotation = function(inQuad)
     return vec3(dX, 0, dZ)
 end
 
-local cesiumObject = {}
-local skyboxObject = {}
-local planeGroundObject = {}
-local aimerObject = {}
-local targetCubeBigObject = {}
-local targetCubeSmallObject = {}
-local RigidBodies = {}
+local cesiumObject                      = {}
+local skyboxObject                      = {}
+local planeGroundObject                 = {}
+local aimerObject                       = {}
+local targetCubeBigObject               = {}
+local targetCubeSmallObject             = {}
+local RigidBodies                       = {}
+local BottomGroundObject                = Jkr.Object3D()
 
-Spr.MechanicsUpdate = function()
+Spr.MechanicsUpdate                     = function()
     CesiumMoving = false
     CesiumModelGLTF = Spr.world3d:GetGLTFModel(Spr.CesiumGLTFIndex)
     CesiumUniform = Spr.world3d:GetUniform3D(Spr.CesiumSkinnedUniformIndex)
     if not IsLoaded then
-        cesiumObject                        = Spr.OpaqueObjects[Spr.CesiumObjIndex]
-        skyboxObject                        = Spr.BackgroundObjects[Spr.SkyboxObjIndex]
-        planeGroundObject                   = Spr.TransparentObjects[Spr.PlaneObjIndex]
-        aimerObject                         = Spr.TransparentObjects[Spr.AimerObjIndex]
-        targetCubeBigObject                 = Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex]
-        targetCubeSmallObject               = Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex]
+        Spr.ResetAimer                     = function()
+            aimerObject:SetParent(nil)
+            aimerObject.mRotation    = quat(1, 0, 0, 0)
+            aimerObject.mTranslation = vec3(0)
+            aimerObject.mScale       = vec3(1)
+            aimerObject.mMatrix      = Jmath.GetIdentityMatrix4x4()
 
-        aimerObject.mScale                  = vec3(1, 0.00001, 1)
-        aimerObject.mMatrix                 = aimerObject:GetLocalMatrix()
-        aimerObject.mScale                  = vec3(1)
-        aimerObject.mTranslation            = aimerObject.mTranslation + vec3(-0.5, 1, 3)
-        aimerObject.mRotation               = aimerObject.mRotation:Rotate_deg(90, vec3(1, 0, 0))
+            aimerObject.mScale       = vec3(0.5, 2, 0.5)
+            aimerObject.mMatrix      = aimerObject:GetLocalMatrix()
+            aimerObject.mScale       = vec3(1)
+            aimerObject.mTranslation = aimerObject.mTranslation + vec3(-0.5, 1, 2)
+            aimerObject.mRotation    = aimerObject.mRotation:Rotate_deg(90, vec3(1, 0, 0))
+        end
 
-        targetCubeBigObject.mTranslation    = vec3(0, 1, 10)
-        targetCubeSmallObject.mTranslation  = vec3(0, 3, -10)
-        targetCubeSmallObject.mScale        = vec3(0.5)
-        targetCubeBigObject.mScale          = vec3(1)
+        Spr.AimerApplyTransformsWithParent = function()
+            local Matrix             = aimerObject:GetLocalMatrix()
+            aimerObject.mRotation    = Matrix:GetRotationComponent()
+            aimerObject.mTranslation = Matrix:GetTranslationComponent()
+            aimerObject.mScale       = Matrix:GetScaleComponent()
+            print("Rotation:", aimerObject.mRotation.x, aimerObject.mRotation.y, aimerObject.mRotation.z)
+            print("Translation:", aimerObject.mTranslation.x, aimerObject.mTranslation.y, aimerObject.mTranslation.z)
+            print("Scale:", aimerObject.mScale.x, aimerObject.mScale.y, aimerObject.mScale.z)
+            aimerObject.mMatrix = Jmath.GetIdentityMatrix4x4()
+        end
 
-        planeGroundObject.mScale            = vec3(20, 10, 20)
-        planeGroundObject.mTranslation      = vec3(0, 10, 0)
-        planeGroundObject.mMatrix           = planeGroundObject:GetLocalMatrix()
-        planeGroundObject.mScale            = vec3(1)
-        planeGroundObject.mTranslation      = vec3(0)
+        cesiumObject                       = Spr.OpaqueObjects[Spr.CesiumObjIndex]
+        skyboxObject                       = Spr.BackgroundObjects[Spr.SkyboxObjIndex]
+        planeGroundObject                  = Spr.TransparentObjects[Spr.PlaneObjIndex]
+        aimerObject                        = Spr.TransparentObjects[Spr.AimerObjIndex]
+        targetCubeBigObject                = Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex]
+        targetCubeSmallObject              = Spr.OpaqueObjects[Spr.TargetSmallCubeObjIndex]
 
-        local BottomGroundObject            = Jkr.Object3D()
-        BottomGroundObject.mBoundingBox.min = vec3(-20, -20, -20)
-        BottomGroundObject.mBoundingBox.max = vec3(20, 0, 20)
+        Spr.ResetAimer()
 
-        local TopObject                     = Jkr.Object3D()
-        TopObject.mBoundingBox.min          = vec3(20, 20, 20)
-        TopObject.mBoundingBox.min          = vec3(40, 40, 40)
+        targetCubeBigObject.mTranslation   = vec3(0, 4, 10)
+        targetCubeSmallObject.mTranslation = vec3(0, 10, 10)
+        targetCubeSmallObject.mScale       = vec3(0.5)
+        targetCubeBigObject.mScale         = vec3(1)
 
-        RigidBodies                         = { Engine.MakeRigidBody(targetCubeSmallObject), Engine
-            .MakeRigidBody(
-                BottomGroundObject, "STATIC") }
+        planeGroundObject.mScale           = vec3(20, 10, 20)
+        planeGroundObject.mTranslation     = vec3(0, 10, 0)
+        planeGroundObject.mMatrix          = planeGroundObject:GetLocalMatrix()
+        planeGroundObject.mScale           = vec3(1)
+        planeGroundObject.mTranslation     = vec3(0)
+
+        BottomGroundObject                 = Jkr.Object3D(planeGroundObject)
+        BottomGroundObject.mTranslation.y  = BottomGroundObject.mTranslation.y - 20
+
+        local TopGroundObject              = Jkr.Object3D(planeGroundObject)
+        TopGroundObject.mTranslation.y     = TopGroundObject.mTranslation.y + 20
+
+        local LeftGroundObject             = Jkr.Object3D(planeGroundObject)
+        LeftGroundObject.mTranslation.x    = LeftGroundObject.mTranslation.x - 40
+
+        local RightGroundObject            = Jkr.Object3D(planeGroundObject)
+        RightGroundObject.mTranslation.x   = RightGroundObject.mTranslation.x + 40
+
+        local FrontGroundObject            = Jkr.Object3D(planeGroundObject)
+        FrontGroundObject.mTranslation.z   = FrontGroundObject.mTranslation.z + 40
+
+        local BackGroundObject             = Jkr.Object3D(planeGroundObject)
+        BackGroundObject.mTranslation.z    = BackGroundObject.mTranslation.z - 40
+
+        local DemoObj                      = Jkr.Object3D()
+
+        targetCubeBigObject.mMass          = 10
+        RigidBodies                        = {}
+
+        Spr.RigidBodiesWithoutAimer        = function()
+            RigidBodies = {
+                Engine.MakeRigidBody(targetCubeSmallObject),
+                Engine.MakeRigidBody(targetCubeBigObject),
+                -- Engine.MakeRigidBody(aimerObject),
+                Engine.MakeRigidBody(BottomGroundObject, "STATIC"),
+            }
+        end
+        Spr.RigidBodiesWithAimer           = function()
+            RigidBodies = {
+                Engine.MakeRigidBody(targetCubeSmallObject),
+                Engine.MakeRigidBody(targetCubeBigObject),
+                Engine.MakeRigidBody(aimerObject),
+                Engine.MakeRigidBody(BottomGroundObject, "STATIC"),
+            }
+        end
+
+        Spr.RigidBodiesWithoutAimer()
     end
-    aimerObject.mScale = vec3(0.3, 0.3, 0.3) * FireModeFactor
-    aimerObject.mRotation = aimerObject.mRotation:Rotate_deg(30, vec3(0, 0, 1))
+
+    if ShouldListenToAimerEvents then
+        aimerObject.mScale = vec3(0.3, 0.3, 0.3) * FireModeFactor
+        aimerObject.mRotation = aimerObject.mRotation:Rotate_deg(30, vec3(0, 0, 1))
+    end
 
     TranslationVector = GetTranslationVectorFromYRotation(cesiumObject.mRotation)
 
@@ -189,14 +248,14 @@ Spr.MechanicsUpdate = function()
 
         Spr.RotateCesiumLeft = function()
             cesiumObject.mRotation = cesiumObject.mRotation:Rotate_deg(
-                10.0 * CesiumRotationSensitivity,
+                5.0 * CesiumRotationSensitivity,
                 vec3(0, 1, 0))
             CesiumMoving = true
         end
 
         Spr.RotateCesiumRight = function()
             cesiumObject.mRotation = cesiumObject.mRotation:Rotate_deg(
-                -10.0 * CesiumRotationSensitivity,
+                -5.0 * CesiumRotationSensitivity,
                 vec3(0, 1, 0))
             CesiumMoving = true
         end
@@ -240,7 +299,9 @@ Spr.MechanicsUpdate = function()
 
         Spr.SwitchFireMode = function()
             local Frame = 1
+            ShouldListenToAimerEvents = true
             if FireModeFactor == 0.0 then
+                Spr.ResetAimer()
                 local FireModeFactor_ = FireModeFactor
                 while FireModeFactor_ <= 1.0 do
                     CallBuffer.PushOneTime(Jkr.CreateUpdatable(function()
@@ -275,8 +336,31 @@ Spr.MechanicsUpdate = function()
         end
 
         Spr.Fire = function()
-            targetCubeSmallObject.mForce.z = 50
-            targetCubeSmallObject.mForce.y = 200
+            local Frame = 1
+            if FireModeFactor >= 1.0 then
+                Spr.SwitchFireMode()
+            end
+            CallBuffer.PushOneTime(Jkr.CreateUpdatable(
+                function()
+                    aimerObject.mMass = 1000000
+                    Spr.AimerApplyTransformsWithParent()
+                    ShouldListenToAimerEvents = false
+                    aimerObject:SetParent(nil)
+                end
+            ), Frame)
+            for i = 1, 100, 1 do
+                CallBuffer.PushOneTime(Jkr.CreateUpdatable(
+                    function()
+                        aimerObject.mForce.z = aimerObject.mForce.z + 100
+                    end
+                ), Frame)
+                Frame = Frame + 1
+            end
+
+            CallBuffer.PushOneTime(Jkr.CreateUpdatable(
+                function()
+                end
+            ), Frame)
         end
 
         Spr.JumpCesium = function()
@@ -363,7 +447,15 @@ Spr.MechanicsUpdate = function()
     end
 
     cesiumObject:SetParent(planeGroundObject)
-    aimerObject:SetParent(cesiumObject)
+    if ShouldListenToAimerEvents then
+        aimerObject:SetParent(cesiumObject)
+    else
+        Spr.ResetAimer()
+        aimerObject:SetParent(nil)
+        -- aimerObject:SetParent(nil)
+    end
+
+
     Spr.PutCameraAtCesium()
 
     CesiumModelGLTF:UpdateAnimation(StillAnimationIndex, 0.01, true)
@@ -393,7 +485,10 @@ Spr.MechanicsUpdate = function()
     MechanicsCopyTransformations(targetCubeBigObject, Spr.ShadowCastingObjects[Spr.TargetBigCubeShadowObjIndex])
     MechanicsCopyTransformations(targetCubeSmallObject, Spr.ShadowCastingObjects[Spr.TargetSmallCubeShadowObjIndex])
 
-    Engine.SimulateRigidBodySubSteps(RigidBodies, 0.0001, 10, 0.5)
+    Engine.SimulateRigidBodySubSteps(RigidBodies, 0.1, 10, 1)
+    for i = 1, #RigidBodies, 1 do
+        RigidBodies[i].ResetForces()
+    end
 
     CallBuffer.Update()
     if not IsLoaded then

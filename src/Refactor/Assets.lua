@@ -4,8 +4,13 @@ Spr.AssetsLoad = function()
           Spr.PlaneCShader = Jkr.CreateCustomImagePainter("res/cache/PlaneShaderCompute.glsl",
                     Spr.RoundedRectangleCShader)
           Spr.AimerCShader = Jkr.CreateCustomImagePainter("res/cache/AimerShaderCompute.glsl", Spr.AimerCShader)
-          Spr.PlaneCShader:Store(Engine.i, Spr.w)
-          Spr.AimerCShader:Store(Engine.i, Spr.w)
+          if Spr.ShouldLoad then
+                    Spr.PlaneCShader:Load(Engine.i, Spr.w)
+                    Spr.AimerCShader:Load(Engine.i, Spr.w)
+          else
+                    Spr.PlaneCShader:Store(Engine.i, Spr.w)
+                    Spr.AimerCShader:Store(Engine.i, Spr.w)
+          end
 
           Spr.PlaneTextureComputeImage = Spr.Wid.CreateComputeImageLabel(vec3(math.huge, math.huge, math.huge),
                     vec3(500, 500, 1), true)

@@ -189,6 +189,8 @@ Spr.LoadObjects = function()
             Spr.TransparentObjects[Spr.AimerObjIndex].mAssociatedModel = -1
             Spr.TransparentObjects[Spr.AimerObjIndex].mAssociatedUniform = math.floor(Spr.AimerUniformIndex)
             Spr.TransparentObjects[Spr.AimerObjIndex].mAssociatedSimple3D = math.floor(Spr.basicTextured3dIndex)
+            Spr.TransparentObjects[Spr.AimerObjIndex].mBoundingBox.max = vec3(1, 1, 1)
+            Spr.TransparentObjects[Spr.AimerObjIndex].mBoundingBox.min = vec3(-1, -1, -1)
             Engine.mt:InjectToGate("__MtAimerObj", true)
             print("Aimer Done")
         end
