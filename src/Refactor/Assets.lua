@@ -39,7 +39,7 @@ Spr.AssetsLoad = function()
                               function()
                                         local PC = Jkr.DefaultCustomImagePainterPushConstant()
                                         PC.x = vec4(0, 0, 0.2, 0.2)
-                                        PC.y = vec4(5, 0.2, 0.2, 3)
+                                        PC.y = vec4(0.145, 0.2, 1, 3)
                                         PC.z = vec4(0.5, 0, Offset, 0.5)
                                         Spr.AimerTextureComputeImage.BindPainter(Spr.AimerCShader)
                                         Spr.AimerTextureComputeImage.DrawPainter(Spr.AimerCShader, PC, math.int(500),
@@ -56,7 +56,7 @@ Spr.AssetsLoad = function()
                                         Spr.PlaneTextureComputeImage.BindPainter(Spr.PlaneCShader)
                                         local PC = Jkr.DefaultCustomImagePainterPushConstant()
                                         local ColorBack = vec4(0.35, 0.5, 0.4, 0.1)
-                                        local ColorCenter = vec4(1, 0.3, 0.2, 0.7)
+                                        local ColorCenter = vec4(0.4, 0.3, 0.2, 0.7)
                                         local ColorSides = vec4(0.35, 0.1, 0.5, 0.7)
                                         if inBackColor then ColorBack = inBackColor end
                                         if inCenterColor then ColorCenter = inCenterColor end

@@ -178,7 +178,7 @@ Spr.Skybox3dF = Engine.Shader()
     .GlslMainBegin()
     .Indent()
     .Append([[
-            outFragColor = texture(samplerCubeMap, vVertUV);
+            outFragColor = texture(samplerCubeMap, vVertUV) * 0.5;
         ]])
     .GlslMainEnd()
     .NewLine().str
@@ -465,6 +465,11 @@ Spr.MainButtonCShader = Jkrmt.Shader()
     .CInvocationLayout(1, 1, 1)
     .uImage2D()
     .ImagePainterPush()
+    .Append [[
+    float rand(vec2 co){
+        return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+    }
+    ]]
     .GlslMainBegin()
     .ImagePainterAssist()
     .Append([[
@@ -475,11 +480,11 @@ Spr.MainButtonCShader = Jkrmt.Shader()
           vec2 Q = abs(xy - center) - hw;
 
           float color = distance(max(Q, vec2(0.0)), vec2(0.0)) + min(max(Q.x, Q.y), 0.0) - radius;
-          color = smoothstep(-0.05, 0.05, -color);
+          color = smoothstep(-0.05, 0.05, -color) * rand(vec2(to_draw_at.x, to_draw_at.y));
 
           vec4 old_color = imageLoad(storageImage, to_draw_at);
           vec4 final_color = vec4(push.mColor.x * color, push.mColor.y * color, push.mColor.z * color, push.mColor.w * color);
-          final_color = mix(final_color, old_color, 1 - color);
+          final_color = mix(final_color, old_color, (1 - color));
           imageStore(storageImage, to_draw_at, final_color);
               ]])
     .GlslMainEnd()

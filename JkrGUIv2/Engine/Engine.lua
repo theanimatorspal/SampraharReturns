@@ -4,6 +4,8 @@ require "JkrGUIv2.Threed"
 require "JkrGUIv2.Multit"
 require "JkrGUIv2.ShaderFactory"
 
+local lerp = Jmath.Lerp
+
 Engine = {}
 Engine.Load = function(self, inEnableValidation)
     self.i = Jkr.CreateInstance(inEnableValidation)
@@ -94,7 +96,7 @@ Engine.SimulateRigidBody = function(inObjectsTable, dt, e)
                     inObjectsTable[i].mStatic)
                 O2.mVelocity = GetVelocityAfterCollision(O2, O1, e,
                     inObjectsTable[j].mStatic)
-                if CollisionThreasold > 0.0001 then
+                if CollisionThreasold > 0.000001 then
                     local ContactNormal = O1:GetContactNormal(O2)
                     local absX = math.abs(ContactNormal.x)
                     local absY = math.abs(ContactNormal.y)
@@ -102,13 +104,13 @@ Engine.SimulateRigidBody = function(inObjectsTable, dt, e)
 
                     if absX > absY and absX > absZ then
                         O1.mTranslation.x = O1.mTranslation.x +
-                            ContactNormal.x * 0.1
+                            ContactNormal.x * 0.01
                     elseif absY > absZ then
                         O1.mTranslation.y = O1.mTranslation.y +
-                            ContactNormal.y * 0.1
+                            ContactNormal.y * 0.01
                     else
                         O1.mTranslation.z = O1.mTranslation.z +
-                            ContactNormal.z * 0.1
+                            ContactNormal.z * 0.01
                     end
                 end
             end
@@ -125,4 +127,39 @@ Engine.SimulateRigidBodySubSteps = function(inObjectsTable, dt, inSubsteps, e)
     for i = 1, SubSteps, 1 do
         Engine.SimulateRigidBody(inObjectsTable, newdt, e)
     end
+end
+
+
+Engine.AnimateObject = function(inCallBuffer, inO1, inO2, inO, inStepValue, inStartingFrame)
+    local Frame = 1
+    local Value = 0.0
+    local StepValue = 0.1
+    if inStartingFrame then Frame = inStartingFrame end
+    if inStepValue then StepValue = inStepValue end
+
+    local c = inCallBuffer
+    while Value <= 1.0 do
+        local Value_ = Value
+        c.PushOneTime(
+            Jkr.CreateUpdatable(
+                function()
+                    if (inO1.mPosition_3f) then
+                        local NewTranslation = lerp(inO1.mPosition_3f, inO2.mPosition_3f, Value_)
+                        inO.mTranslation = NewTranslation
+                    end
+                    if (inO1.mRotation_Qf) then
+                        local NewRotation = lerp(inO1.mRotation_Qf, inO2.mRotation_Qf, Value_)
+                        inO.mRotation = NewRotation
+                    end
+                    if (inO1.mScale_3f) then
+                        local NewScale = lerp(inO1.mScale_3f, inO2.mScale_3f, Value_)
+                        inO.mScale = NewScale
+                    end
+                end
+            ), Frame
+        )
+        Value = Value + StepValue
+        Frame = Frame + 1
+    end
+    return Frame
 end

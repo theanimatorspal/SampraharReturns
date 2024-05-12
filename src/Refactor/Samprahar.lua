@@ -97,7 +97,7 @@ while not e:ShouldQuit() do
           Draw()
           w:EndUIs()
 
-          w:BeginDraws(1, 0.1, 0.1, 1, 1)
+          w:BeginDraws(0.1, 0.1, 0.1, 1, 1)
           MultiThreadedExecute()
           w:ExecuteUIs()
           w:EndDraws()
