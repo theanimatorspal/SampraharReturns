@@ -8,9 +8,11 @@ Spr.world3d = Jkr.World3D(Spr.buffer3d)
 Spr.camera = Jkr.Camera3D()
 -- SetUP Defaults
 --Spr.buffer3d:CheckAndResize(50000, 50000)
-Spr.w:BuildShadowPass(10000, 10000)
+print("Building Shadow Pass")
+Spr.w:BuildShadowPass(1000, 1000)
+print("Built Shadow Pass")
 Spr.camera:SetAttributes(vec3(0, 0, 0), vec3(0, 5, -10))
 Spr.camera:SetPerspective(0.30, 16 / 9, 0.1, 10000)
 Spr.world3d:AddCamera(Spr.camera)
 Spr.world3d:AddLight3D(vec4(100, 100, -100, 1),
-                    Jmath.Normalize(vec4(0, 0, 0, 0) - vec4(10, 10, -10, 1)))
+          Jmath.Normalize(vec4(0, 0, 0, 0) - vec4(10, 10, -10, 1)))

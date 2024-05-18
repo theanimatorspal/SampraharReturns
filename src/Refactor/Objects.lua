@@ -63,7 +63,7 @@ Spr.LoadObjects = function()
     ]======================================================================================================================]
     Engine.mt:AddJobF(
         function()
-            while not Engine.mt:GetFromGateToThread("__MtBasci3dIndex", StateId) do end
+            while not Engine.mt:GetFromGateToThread("__MtBasci3dIndex", -1) do end
             local Uniform = Spr.world3d:GetUniform3D(math.floor(Spr.GlobalUniformIndex))
             local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.basic3dIndex))
             Uniform:Build(Simple3D)
@@ -102,37 +102,37 @@ Spr.LoadObjects = function()
         CESIUM
     --]=======]
     -- TODO IDK why multithreading is not working here
-    -- Engine.mt:AddJobF(
-    --     function()
-    local Model = Spr.world3d:GetGLTFModel(math.floor(Spr.CesiumGLTFIndex))
-    local Id = Spr.buffer3d:Add(Model)
-    Engine.mt:InjectToGate("__MtCesiumId", Id)
-    --     end
-    -- )
+    Engine.mt:AddJobF(
+        function()
+            local Model = Spr.world3d:GetGLTFModel(math.floor(Spr.CesiumGLTFIndex))
+            local Id = Spr.buffer3d:Add(Model)
+            Engine.mt:InjectToGate("__MtCesiumId", Id)
+        end
+    )
 
-    -- Engine.mt:AddJobF(
-    --     function()
-    while not Engine.mt:GetFromGateToThread("__MtSkinned3dIndex", -1) do end
-    local Uniform = Spr.world3d:GetUniform3D(math.floor(Spr.CesiumSkinnedUniformIndex))
-    local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.skinned3dIndex))
-    while not Engine.mt:GetFromGateToThread("__MtCesiumId", -1) do end
-    local Model = Spr.world3d:GetGLTFModel(math.floor(Spr.CesiumGLTFIndex))
-    local loadSkin = true
-    local loadImages = true
-    Uniform:Build(Simple3D, Model, 0, loadSkin, loadImages)
-    local Id = math.floor(Engine.mt:GetFromGateToThread("__MtCesiumId", -1))
-    Spr.OpaqueObjects[Spr.CesiumObjIndex].mId = math.floor(Id)
-    Spr.OpaqueObjects[Spr.CesiumObjIndex].mAssociatedModel = math.floor(Spr.CesiumGLTFIndex)
-    Spr.OpaqueObjects[Spr.CesiumObjIndex].mAssociatedSimple3D = math.floor(Spr.skinned3dIndex)
-    Spr.OpaqueObjects[Spr.CesiumObjIndex].mAssociatedUniform = math.floor(Spr
-        .CesiumSkinnedUniformIndex)
-    local NodeIndices = Model:GetNodeIndexByMeshIndex(0)
-    Spr.OpaqueObjects[Spr.CesiumObjIndex].mMatrix = Model:GetNodeMatrixByIndex(NodeIndices[1])
-    Spr.OpaqueObjects[Spr.CesiumObjIndex].mBoundingBox = Model:GetMeshesRef()[1].mBB
-    print("Cesium Object Done")
-    Engine.mt:InjectToGate("__MtCesiumObjLoaded", true)
-    --     end
-    -- )
+    Engine.mt:AddJobF(
+        function()
+            while not Engine.mt:GetFromGateToThread("__MtSkinned3dIndex", -1) do end
+            local Uniform = Spr.world3d:GetUniform3D(math.floor(Spr.CesiumSkinnedUniformIndex))
+            local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.skinned3dIndex))
+            while not Engine.mt:GetFromGateToThread("__MtCesiumId", -1) do end
+            local Model = Spr.world3d:GetGLTFModel(math.floor(Spr.CesiumGLTFIndex))
+            local loadSkin = true
+            local loadImages = true
+            Uniform:Build(Simple3D, Model, 0, loadSkin, loadImages)
+            local Id = math.floor(Engine.mt:GetFromGateToThread("__MtCesiumId", -1))
+            Spr.OpaqueObjects[Spr.CesiumObjIndex].mId = math.floor(Id)
+            Spr.OpaqueObjects[Spr.CesiumObjIndex].mAssociatedModel = math.floor(Spr.CesiumGLTFIndex)
+            Spr.OpaqueObjects[Spr.CesiumObjIndex].mAssociatedSimple3D = math.floor(Spr.skinned3dIndex)
+            Spr.OpaqueObjects[Spr.CesiumObjIndex].mAssociatedUniform = math.floor(Spr
+                .CesiumSkinnedUniformIndex)
+            local NodeIndices = Model:GetNodeIndexByMeshIndex(0)
+            Spr.OpaqueObjects[Spr.CesiumObjIndex].mMatrix = Model:GetNodeMatrixByIndex(NodeIndices[1])
+            Spr.OpaqueObjects[Spr.CesiumObjIndex].mBoundingBox = Model:GetMeshesRef()[1].mBB
+            print("Cesium Object Done")
+            Engine.mt:InjectToGate("__MtCesiumObjLoaded", true)
+        end
+    )
 
     --[=======[
         SKYBOX
@@ -159,7 +159,7 @@ Spr.LoadObjects = function()
 
     Engine.mt:AddJobF(
         function()
-            while not Engine.mt:GetFromGateToThread("__MtShadowed3dIndex", StateId) do end
+            while not Engine.mt:GetFromGateToThread("__MtShadowed3dIndex", -1) do end
             local Uniform = Spr.world3d:GetUniform3D(math.floor(Spr.ShadowedUniformIndex))
             local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.shadowed3dIndex))
             Uniform:Build(Simple3D)
@@ -202,7 +202,7 @@ Spr.LoadObjects = function()
     --]======]
     Engine.mt:AddJobF(
         function()
-            while not Engine.mt:GetFromGateToThread("__MtShadowed3dUniformDone", StateId) do end
+            while not Engine.mt:GetFromGateToThread("__MtShadowed3dUniformDone", -1) do end
             local BigCube = Jkr.Generator(Jkr.Shapes.Cube3D, vec3(1, 1, 1))
             local BigCubeId = Spr.buffer3d:Add(BigCube, vec3(0, 0, 0))
             Spr.OpaqueObjects[Spr.TargetBigCubeObjIndex].mId = math.floor(BigCubeId)
@@ -235,10 +235,10 @@ Spr.LoadObjects = function()
     -- TODO Move this to Cesium
     Engine.mt:AddJobF(
         function()
-            while not Engine.mt:GetFromGateToThread("__MtShadowSkinned3dIndex", StateId) do end
-            while not Engine.mt:GetFromGateToThread("__MtCesiumId", StateId) do end
-            while not Engine.mt:GetFromGateToThread("__MtCesiumObjLoaded", StateId) do end
-            local CesiumId = Engine.mt:GetFromGateToThread("__MtCesiumId", StateId)
+            while not Engine.mt:GetFromGateToThread("__MtShadowSkinned3dIndex", -1) do end
+            while not Engine.mt:GetFromGateToThread("__MtCesiumId", -1) do end
+            while not Engine.mt:GetFromGateToThread("__MtCesiumObjLoaded", -1) do end
+            local CesiumId = Engine.mt:GetFromGateToThread("__MtCesiumId", -1)
             local Uniform = Spr.world3d:GetUniform3D(math.floor(Spr.CesiumShadowUniformIndex))
             local Simple3D = Spr.world3d:GetSimple3D(math.floor(Spr.shadowSkinned3dIndex))
             local CesiumSkinnedUniform = Spr.world3d:GetUniform3D(math.floor(Spr.CesiumSkinnedUniformIndex))

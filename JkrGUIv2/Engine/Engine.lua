@@ -83,7 +83,7 @@ local GetVelocityAfterCollision = function(inObject1, inObject2, e, inStatic)
 end
 
 local abs = math.abs
-Engine.SimulateRigidBody = function(inObjectsTable, dt, e)
+Engine.SimulateRigidBody = function(inObjectsTable, dt, e, inCallback)
     local ObjectsSize = #inObjectsTable
     for i = 1, ObjectsSize, 1 do
         local O1 = inObjectsTable[i].object
@@ -92,6 +92,7 @@ Engine.SimulateRigidBody = function(inObjectsTable, dt, e)
             local O2 = inObjectsTable[j].object
             local CollisionThreasold = O1:GetCollisionThreashold(O2)
             if CollisionThreasold > 0.0 then
+                inCallback(i, j)
                 O1.mVelocity = GetVelocityAfterCollision(O1, O2, e,
                     inObjectsTable[i].mStatic)
                 O2.mVelocity = GetVelocityAfterCollision(O2, O1, e,
@@ -118,14 +119,14 @@ Engine.SimulateRigidBody = function(inObjectsTable, dt, e)
     end
 end
 
-Engine.SimulateRigidBodySubSteps = function(inObjectsTable, dt, inSubsteps, e)
+Engine.SimulateRigidBodySubSteps = function(inObjectsTable, dt, inSubsteps, e, inCallback)
     local SubSteps = 10
     if inSubsteps then
         SubSteps = inSubsteps
     end
     local newdt = dt / SubSteps
     for i = 1, SubSteps, 1 do
-        Engine.SimulateRigidBody(inObjectsTable, newdt, e)
+        Engine.SimulateRigidBody(inObjectsTable, newdt, e, inCallback)
     end
 end
 
@@ -162,4 +163,157 @@ Engine.AnimateObject = function(inCallBuffer, inO1, inO2, inO, inStepValue, inSt
         Frame = Frame + 1
     end
     return Frame
+end
+
+Engine.Animate_4f = function(inCallBuffer, inV1, inV2, inV, inStepValue, inStartingFrame)
+    local Frame = 1
+    local Value = 0.0
+    local StepValue = 0.1
+    if inStartingFrame then Frame = inStartingFrame end
+    if inStepValue then StepValue = inStepValue end
+
+    local c = inCallBuffer
+    while Value <= 1.0 do
+        local Value_ = Value
+        c.PushOneTime(
+            Jkr.CreateUpdatable(
+                function()
+                    local vv = lerp(inV1, inV2, Value_)
+                    inV.x = vv.x
+                    inV.y = vv.y
+                    inV.z = vv.z
+                    inV.w = vv.w
+                    --print(string.format("from %f, to: %f, value: %f, value_X: %f", inV1.x, inV2.x, vv.x, Value_))
+                end
+            ), Frame
+        )
+        Value = Value + StepValue
+        Frame = Frame + 1
+    end
+    return Frame
+end
+
+Engine.GetGLTFInfo = function(inLoadedGLTF, inShouldPrint)
+    if (inShouldPrint) then
+        io.write(string.format(
+            [[
+GLTF:-
+Vertices = %d,
+Indices = %d,
+Images = %d,
+Textures = %d,
+Materials = %d,
+Nodes = %d,
+Skins = %d,
+Animations = %d,
+                ]],
+            inLoadedGLTF:GetVerticesSize(),
+            inLoadedGLTF:GetIndicesSize(),
+            inLoadedGLTF:GetImagesSize(),
+            inLoadedGLTF:GetTexturesSize(),
+            inLoadedGLTF:GetMaterialsSize(),
+            inLoadedGLTF:GetNodesSize(),
+            inLoadedGLTF:GetSkinsSize(),
+            inLoadedGLTF:GetAnimationsSize()
+        ))
+    end
+end
+
+Engine.CreateShaderByGLTFMaterial = function(inGLTF, inMaterialIndex)
+    local Material = inGLTF:GetMaterialsRef()[inMaterialIndex]
+    local vShader = Engine.Shader()
+        .Header(450)
+        .NewLine()
+        .VLayout()
+        .Out(0, "vec2", "vUV")
+        .Out(1, "vec3", "vNormal")
+        .Out(2, "vec3", "vWorldPos")
+        .Push()
+        .Ubo()
+        .GlslMainBegin()
+        .Indent()
+        .Append(
+            [[
+              vec4 Pos = Push.model * vec4(inPosition, 1.0);
+              gl_Position = Ubo.proj * Ubo.view * Pos;
+              vUV = inUV;
+              vNormal = vec3(Push.model) * inNormal;
+              vWorldPos = vec3(Pos);
+        ]]
+        )
+        .NewLine()
+        .InvertY()
+        .GlslMainEnd()
+        .NewLine()
+    local fShader = Jkrmt.Shader()
+        .Header(450)
+        .NewLine()
+        .In(0, "vec2", "vUV")
+        .In(1, "vec3", "vNormal")
+        .In(2, "vec3", "vWorldPos")
+        .outFragColor()
+        .Push()
+        .Ubo()
+
+    local binding = 3
+    if (Material.mBaseColorTextureIndex ~= -1) then
+        fShader.uSampler2D(binding, "uBaseColorTexture").NewLine()
+        binding = binding + 1
+    end
+    if (Material.mMetallicRoughnessTextureIndex ~= -1) then
+        fShader.uSampler2D(binding, "uMetallicRoughnessTexture").NewLine()
+        binding = binding + 1
+    end
+    if (Material.mNormalTextureIndex ~= -1) then
+        fShader.uSampler2D(binding, "uNormalTexture").NewLine()
+        binding = binding + 1
+    end
+    if (Material.mOcclusionTextureIndex ~= -1) then
+        fShader.uSampler2D(binding, "uOcclusionTexture").NewLine()
+        binding = binding + 1
+    end
+    if (Material.mEmissiveTextureIndex ~= -1) then
+        fShader.uSampler2D(binding, "uEmissiveTexture").NewLine()
+        binding = binding + 1
+    end
+
+    fShader.GlslMainBegin()
+    if (Material.mBaseColorTextureIndex ~= -1) then
+        fShader.Append([[ vec4 BaseColor = texture(uBaseColorTexture, vUV); ]])
+            .NewLine()
+    else
+        fShader.Append([[ vec4 BaseColor = vec4(1, 1, 0, 1); ]])
+            .NewLine()
+    end
+
+    fShader.Append([[outFragColor = BaseColor;]])
+    fShader.GlslMainEnd()
+
+    return { vShader = vShader.str, fShader = fShader.str }
+end
+
+Jkrmt.CreateObjectByGLTFPrimitiveAndUniform = function(inWorld3d,
+                                                       inGLTFModelId,
+                                                       inGLTFModelInWorld3DId,
+                                                       inMaterialToSimple3DIndex,
+                                                       inMeshIndex,
+                                                       inPrimitive)
+    local uniformIndex = inWorld3d:AddUniform3D(i)
+    local uniform = inWorld3d:GetUniform3D(uniformIndex)
+    local simple3dIndex = inMaterialToSimple3DIndex[inPrimitive.mMaterialIndex + 1]
+    local simple3d = inWorld3d:GetSimple3D(simple3dIndex)
+    local gltf = inWorld3d:GetGLTFModel(inGLTFModelId)
+    uniform:Build(simple3d, gltf, inPrimitive)
+
+    local Object3D = Jkr.Object3D()
+    Object3D.mId = inGLTFModelInWorld3DId
+    Object3D.mAssociatedUniform = uniformIndex
+    Object3D.mAssociatedModel = inGLTFModelId
+    Object3D.mAssociatedSimple3D = simple3dIndex
+    Object3D.mIndexCount = inPrimitive.mIndexCount
+    Object3D.mFirstIndex = inPrimitive.mFirstIndex
+    local NodeIndices = gltf:GetNodeIndexByMeshIndex(inMeshIndex - 1)
+    Object3D.mMatrix = gltf:GetNodeMatrixByIndex(NodeIndices[1])
+
+    return Object3D
 end

@@ -1,4 +1,4 @@
-Validation = false
+Validation = true
 LoadShadersFromCache = false
 
 require("src.Refactor.Spr")
@@ -13,8 +13,11 @@ Engine.mt:Inject("Spr", Spr)
 Engine.mt:Inject("Engine", Engine)
 Spr.CompileShaders()
 Spr.LoadObjects()
+print("ASSETS LOading")
 Spr.AssetsLoad()
+print("ASSETS LOaded")
 Spr.UserInterfaceLoad()
+print("UI LOaded")
 
 --[================================================================[
           DRAW CALLS MAIN LOOP
@@ -74,8 +77,10 @@ local function Event()
           Spr.UserInterFaceEvent()
 end
 
-e:SetEventCallBack(Event)
+Spr.DrawColor = vec4(0.1, 0.1, 0.1, 0.1)
 
+e:SetEventCallBack(Event)
+print("BEGINDRAw")
 while not e:ShouldQuit() do
           oldTime = w:GetWindowCurrentTime()
           e:ProcessEvents()
@@ -97,18 +102,17 @@ while not e:ShouldQuit() do
           Draw()
           w:EndUIs()
 
-          w:BeginDraws(0.1, 0.1, 0.1, 1, 1)
+          w:BeginDraws(Spr.DrawColor.x, Spr.DrawColor.y, Spr.DrawColor.z, Spr.DrawColor.w, 1)
           MultiThreadedExecute()
           w:ExecuteUIs()
           w:EndDraws()
           w:Present()
           local delta = w:GetWindowCurrentTime() - oldTime
-          if (frameCount % 100 == 0) then
-                    w:SetTitle("Samprahar Frame Rate" .. 1000 / delta)
-          end
-          frameCount = frameCount + 1
+          -- if (frameCount % 100 == 0) then
+          --           w:SetTitle("Samprahar Frame Rate" .. 1000 / delta)
+          -- end
+          -- frameCount = frameCount + 1
           mt:InjectToGate("__MtDrawCount", 0)
 end
-
 
 Engine.mt:Wait()

@@ -50,6 +50,26 @@ local AimerRigidBodyIndex               = 3
 
 local WalkAnimationSpeed                = 0.1
 
+local Danger                            = false
+local FireCount                         = 0
+local Power                             = 0.1
+local Health                            = 1
+local Score                             = 0
+local Thrown                            = false
+local aimerAndCubeCollided              = false
+
+local RestoreHealth                     = 1
+local RestorePower                      = 0.1
+local RestoreScore                      = 0
+local GameOver                          = false
+
+local DangerOff                         = function()
+    Engine.Animate_4f(CallBuffer, vec4(1, 0.1, 0.1, 1), vec4(0.1, 0.1, 0.1, 1), Spr.DrawColor, 0.5,
+        #CallBuffer.mOneTimeUpdatables)
+    Danger = false
+    Spr.DangerSound:Pause()
+end
+
 local GetTranslationVectorFromYRotation = function(inQuad)
     local rX = inQuad.x
     local rY = inQuad.y
@@ -72,16 +92,25 @@ local GetTranslationVectorFromYRotation = function(inQuad)
     return vec3(dX, 0, dZ)
 end
 
-local cesiumObject                      = {}
-local skyboxObject                      = {}
-local planeGroundObject                 = {}
-local aimerObject                       = {}
-local targetCubeBigObject               = {}
-local targetCubeSmallObject             = {}
-local RigidBodies                       = {}
-local BottomGroundObject                = Jkr.Object3D()
 
-Spr.MechanicsUpdate                     = function()
+local cesiumObject          = {}
+local skyboxObject          = {}
+local planeGroundObject     = {}
+local aimerObject           = {}
+local targetCubeBigObject   = {}
+local targetCubeSmallObject = {}
+local RigidBodies           = {}
+local BottomGroundObject    = Jkr.Object3D()
+
+local CollisionCallback     = function(i, j)
+    if #RigidBodies == 3 and i == 1 and j == 2 then
+        if FireCount > 0 and not aimerAndCubeCollided then
+            aimerAndCubeCollided = true
+        end
+    end
+end
+
+Spr.MechanicsUpdate         = function()
     CesiumMoving = false
     CesiumModelGLTF = Spr.world3d:GetGLTFModel(Spr.CesiumGLTFIndex)
     CesiumUniform = Spr.world3d:GetUniform3D(Spr.CesiumSkinnedUniformIndex)
@@ -109,7 +138,11 @@ Spr.MechanicsUpdate                     = function()
         end
 
         Spr.SetAimerPower                  = function()
-            aimerObject.mScale = vec3(10, 10, 10)
+            if Power > 0.9 then
+                aimerObject.mScale = vec3(10, 10, 10) * Power
+            else
+                aimerObject.mScale = vec3(0.5)
+            end
         end
 
         Spr.PlayCesiumEnterAnimation       = function(inStartingFrame)
@@ -158,6 +191,18 @@ Spr.MechanicsUpdate                     = function()
                     ShouldListenToEvents = true
                 end
             ), Frame)
+            Health = RestoreHealth
+            Power = RestorePower
+            Score = RestoreScore
+            Spr.SetScoreIndicator(Score)
+            Spr.SetHealthIndicaotr(Health)
+            Spr.SetScoreBoardPowerIndicator(Power)
+            Spr.PutOnScoreBoardStuffs()
+            if GameOver then
+                Spr.PutOffGameOverText()
+                GameOver = false
+            end
+            Danger = false
         end
 
         ShouldListenToEvents               = false
@@ -224,6 +269,9 @@ Spr.MechanicsUpdate                     = function()
         end
 
         Spr.RigidBodiesWithoutAimer()
+
+        Spr.SetScoreBoardPowerIndicator(Power)
+        Spr.SetHealthIndicaotr(Health)
     end
 
     if ShouldListenToAimerEvents then
@@ -353,6 +401,8 @@ Spr.MechanicsUpdate                     = function()
             local Frame = 1
             ShouldListenToAimerEvents = true
             Spr.RigidBodiesWithoutAimer()
+            Spr.FireSound:Pause()
+            Spr.FireSound:Play()
             if FireModeFactor == 0.0 then
                 Spr.ResetAimer()
                 aimerObject:SetParent(cesiumObject)
@@ -391,13 +441,19 @@ Spr.MechanicsUpdate                     = function()
 
         Spr.Fire = function()
             local Frame = 1
+            aimerAndCubeCollided = false
             if FireModeFactor >= 1.0 then
+                FireCount = FireCount + 1
                 Spr.SwitchFireMode()
             end
             CallBuffer.PushOneTime(Jkr.CreateUpdatable(
                 function()
+                    if FireModeFactor >= 0.5 then
+                        FireCount = FireCount + 1
+                    end
                     ShouldListenToFireEvents = false
                     aimerObject.mMass = 1000000
+                    Spr.SetAimerPower()
                     Spr.AimerApplyTransformsWithParent()
                     ShouldListenToAimerEvents = false
                     aimerObject:SetParent(nil)
@@ -417,6 +473,7 @@ Spr.MechanicsUpdate                     = function()
                 function()
                     ShouldListenToFireEvents = true
                     ShouldListenToEvents = true
+                    Thrown = true
                 end
             ), Frame)
         end
@@ -448,7 +505,12 @@ Spr.MechanicsUpdate                     = function()
     end
 
     cesiumObject.mTranslation.y = CurrentJumpBlendFactor
-    skyboxObject.mRotation = skyboxObject.mRotation:Rotate_deg(0.01, vec3(0, 1, 0))
+    skyboxObject.mRotation      = skyboxObject.mRotation:Rotate_deg(0.01, vec3(0, 1, 0))
+    Spr.FireEve                 = function()
+        if ShouldListenToFireEvents then
+            Spr.Fire()
+        end
+    end
 
     if ShouldListenToEvents then
         local e = Engine.e
@@ -485,8 +547,10 @@ Spr.MechanicsUpdate                     = function()
             Spr.JumpCesium()
             ShouldUpdate = true
         end
-        if ShouldListenToFireEvents and e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_X) then
-            Spr.Fire()
+        if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_X) then
+            if ShouldListenToFireEvents then
+                Spr.Fire()
+            end
         end
         if ShouldListenToCameraEvents then
             if e:IsKeyPressedContinous(Keyboard.SDL_SCANCODE_C) then
@@ -501,6 +565,15 @@ Spr.MechanicsUpdate                     = function()
             Spr.StepsSound:Pause()
         end
     end
+
+    if (CurrentFrame % 1000 == 0) then
+        Health = Health - 0.1
+        if Health <= 0 then
+            Health = 0
+        end
+        Spr.SetHealthIndicaotr(Health)
+    end
+
     if (FireModeFactor > 0.0) then
         Spr.AimSound:Play()
     end
@@ -512,17 +585,87 @@ Spr.MechanicsUpdate                     = function()
         aimerObject:SetParent(nil)
     end
 
-    if targetCubeSmallObject.mTranslation.y < -1 then
-        targetCubeSmallObject.mTranslation.y = 10
-        targetCubeSmallObject.mTranslation.x = math.random(-1, 1)
-    end
-
     if targetCubeBigObject.mTranslation.y < -1 then
         targetCubeBigObject.mTranslation.y = 8
         targetCubeBigObject.mTranslation.x = math.random(-18, 18)
         targetCubeBigObject.mTranslation.z = math.random(-18, 18)
         targetCubeBigObject.mVelocity = vec3(0)
         targetCubeBigObject.mForce = vec3(0, -targetCubeBigObject.mMass * Engine.GravitationalForce, 0)
+        if FireCount > 0 then
+            Score = Score + math.floor(50 / FireCount)
+            FireCount = 0
+            Spr.SetScoreIndicator(Score)
+        end
+        Power = Power * 2
+        if Power >= 1 then
+            Power = 1
+        end
+        Spr.SetScoreBoardPowerIndicator(Power)
+        aimerAndCubeCollided = false
+    end
+
+    if aimerObject.mTranslation.y < -10
+        and targetCubeBigObject.mTranslation.y > -1
+        and not aimerAndCubeCollided
+        and Thrown
+        and FireCount > 0
+    then
+        Score = -10
+        Spr.SetScoreIndicator(Score)
+        if not Danger then
+            Engine.Animate_4f(CallBuffer, vec4(0.1, 0.1, 0.1, 1), vec4(1, 0.1, 0.1, 1), Spr.DrawColor, 0.5, 1)
+            Danger = true
+        end
+
+        if Score < 0 then
+            Power = 0.1
+        end
+        Spr.SetScoreBoardPowerIndicator(Power)
+        Thrown = false
+        aimerAndCubeCollided = false
+    end
+
+    if Danger then
+        if CurrentFrame % 10 == 0 then
+            Spr.DangerSound:Play()
+        end
+        Power = 0.1
+    end
+
+    if cesiumObject:IsCollidingWith(targetCubeBigObject) then
+        Health = 0
+    end
+
+    if Score < 0 then
+        if CurrentFrame % 100 == 0 then
+            Health = Health - 0.1
+            Spr.SetHealthIndicaotr(Health)
+        end
+    else
+        if Danger then
+            DangerOff()
+        end
+    end
+
+    if CurrentFrame % 100 == 0 then
+        Power = 0.1
+        Spr.SetScoreBoardPowerIndicator(Power)
+    end
+
+    if Health <= 0 and not GameOver then
+        ShouldListenToEvents = false
+        RestoreHealth = 1
+        RestorePower = 0.1
+        RestoreScore = 0
+        Spr.PutOnPlayExitButtons()
+        Spr.PutOffScoreBoardStuffs()
+        Spr.PutOnGameOverText()
+        Spr.DangerSound:Pause()
+        Spr.GameOverSound:Play()
+        if Danger then
+            DangerOff()
+        end
+        GameOver = true
     end
 
     Spr.PutCameraAtCesium()
@@ -560,9 +703,10 @@ Spr.MechanicsUpdate                     = function()
         IsLoaded = true
     end
 
-    Engine.SimulateRigidBodySubSteps(RigidBodies, 0.1, 10, 1)
+    Engine.SimulateRigidBodySubSteps(RigidBodies, 0.1, 10, 1, CollisionCallback)
     for i = 1, #RigidBodies, 1 do
         RigidBodies[i].ResetForces()
     end
+
     CurrentFrame = CurrentFrame + 1
 end
