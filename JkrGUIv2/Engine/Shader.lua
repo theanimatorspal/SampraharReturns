@@ -53,7 +53,7 @@ vec2 xy = vec2(x_cart, y_cart);
     end
 
 
-    local vLayout              = [[
+    local vLayout               = [[
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
@@ -61,14 +61,14 @@ layout(location = 2) in vec2 inUV;
 layout(location = 3) in vec3 inColor;
                     ]]
 
-    local push                 = [[
+    local push                  = [[
 
 layout(push_constant, std430) uniform pc {
 	mat4 model;
-          mat4 m2;
+    mat4 m2;
 } Push;
 ]]
-    local Ubo                  = [[
+    local Ubo                   = [[
 
 layout(set = 0, binding = 0) uniform UBO {
    mat4 view;
@@ -80,7 +80,7 @@ layout(set = 0, binding = 0) uniform UBO {
 } Ubo;
 ]]
 
-    local LinearizeDepth       = [[
+    local LinearizeDepth        = [[
 
 float LinearizeDepth(float depth, float near, float far)
 {
@@ -91,7 +91,7 @@ float LinearizeDepth(float depth, float near, float far)
 }
           ]]
 
-    local ShadowTextureProject = [[
+    local ShadowTextureProject  = [[
 
 float ShadowTextureProject(vec4 shadowCoord, vec2 off)
 {
@@ -108,7 +108,7 @@ float ShadowTextureProject(vec4 shadowCoord, vec2 off)
 }
 ]]
 
-    local inJointInfluence     = [[
+    local inJointInfluence      = [[
 
 struct JointInfluence {
     vec4 mJointIndices;
@@ -121,13 +121,13 @@ layout(std140, set = 1, binding = 2) readonly buffer JointInfluenceSSBOIn {
 
 ]]
 
-    local inJointMatrices      = [[
+    local inJointMatrices       = [[
 
 layout(std140, set = 1, binding = 1) readonly buffer JointMatrixSSBOIn {
     mat4 inJointMatrices[ ];
 };
           ]]
-    local BiasMatrix           = [[
+    local BiasMatrix            = [[
 
     const mat4 BiasMatrix = mat4(
     0.5, 0.0, 0.0, 0.0,
@@ -136,7 +136,7 @@ layout(std140, set = 1, binding = 1) readonly buffer JointMatrixSSBOIn {
     0.5, 0.5, 0.0, 1.0 );
     ]]
 
-    local D_GGX                = [[
+    local D_GGX                 = [[
 // Normal Distribution Function
 float D_GGX(float dotNH, float roughness)
 {
@@ -148,7 +148,7 @@ float D_GGX(float dotNH, float roughness)
 
     ]]
 
-    local G_SchlicksmithGGX    = [[
+    local G_SchlicksmithGGX     = [[
 // Geometric Shadowing Function
 float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
 {
@@ -160,7 +160,7 @@ float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
 }
     ]]
 
-    local F_Schlick            = [[
+    local F_Schlick             = [[
 // Fresnel Function
 vec3 F_Schlick(float cosTheta, float metallic)
 {
@@ -169,6 +169,27 @@ vec3 F_Schlick(float cosTheta, float metallic)
     return F;
 }
     ]]
+
+    local F_SchlickR            = [[
+vec3 F_SchlickR(float cosTheta, vec3 F0, float roughness)
+{
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
+    ]]
+
+    local PrefilteredReflection = [[
+vec3 PrefilteredReflection(vec3 R, float roughness)
+{
+	const float MAX_REFLECTION_LOD = 9.0; // todo: param/const
+	float lod = roughness * MAX_REFLECTION_LOD;
+	float lodf = floor(lod);
+	float lodc = ceil(lod);
+	vec3 a = textureLod(prefilteredMap, R, lodf).rgb;
+	vec3 b = textureLod(prefilteredMap, R, lodc).rgb;
+	return mix(a, b, lod - lodf);
+}
+    ]]
+
 
     local BRDF                 = [[
 // Specular BRDF composition
@@ -302,6 +323,36 @@ vec3 PrefilterEnvMap(vec3 R, float roughness)
 	return (color / totalWeight);
 }
 
+]]
+
+    local SpecularContribution = [[
+vec3 SpecularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float roughness)
+{
+	// Precalculate vectors and dot products	
+	vec3 H = normalize (V + L);
+	float dotNH = clamp(dot(N, H), 0.0, 1.0);
+	float dotNV = clamp(dot(N, V), 0.0, 1.0);
+	float dotNL = clamp(dot(N, L), 0.0, 1.0);
+
+	// Light color fixed
+	vec3 lightColor = vec3(1.0);
+
+	vec3 color = vec3(0.0);
+
+	if (dotNL > 0.0) {
+		// D = Normal distribution (Distribution of the microfacets)
+		float D = D_GGX(dotNH, roughness);
+		// G = Geometric shadowing term (Microfacets shadowing)
+		float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);
+		// F = Fresnel factor (Reflectance depending on angle of incidence)
+		vec3 F = F_Schlick(dotNV, F0);		
+		vec3 spec = D * F * G / (4.0 * dotNL * dotNV + 0.001);		
+		vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);			
+		color += (kD * ALBEDO / PI + spec) * dotNL;
+	}
+
+	return color;
+}
 ]]
 
     o.str                      = ""
@@ -449,6 +500,12 @@ vec3 PrefilterEnvMap(vec3 R, float roughness)
         return o.NewLine()
     end
 
+    o.F_SchlickR               = function()
+        o.NewLine()
+        o.Append(F_SchlickR)
+        return o.NewLine()
+    end
+
     o.BRDF                     = function()
         o.NewLine()
         o.Append(BRDF)
@@ -482,6 +539,18 @@ vec3 PrefilterEnvMap(vec3 R, float roughness)
     o.PrefilterEnvMap          = function()
         o.NewLine()
         o.Append(PrefilterEnvMap)
+        return o.NewLine()
+    end
+
+    o.PrefilteredReflection    = function()
+        o.NewLine()
+        o.Append(PrefilteredReflection)
+        return o.NewLine()
+    end
+
+    o.SpecularContribution     = function()
+        o.NewLine()
+        o.Append(SpecularContribution)
         return o.NewLine()
     end
 
@@ -614,3 +683,273 @@ Engine.CreateObjectByGLTFPrimitiveAndUniform = function(inWorld3d,
 
     return Object3D
 end
+
+PBR = {}
+
+PBR.Skybox3dV = Engine.Shader()
+    .Header(450)
+    .NewLine()
+    .VLayout()
+    .Out(0, "vec3", "vVertUV")
+    .Push()
+    .Ubo()
+    .GlslMainBegin()
+    .Indent()
+    .Append([[
+                vec3 position = mat3(Ubo.view * Push.model) * inPosition.xyz;
+                gl_Position = (Ubo.proj * vec4(position, 0.0)).xyzz;
+                vVertUV = inPosition.xyz;
+        ]]).InvertY()
+    .NewLine()
+    .GlslMainEnd()
+    .NewLine().str
+
+PBR.Skybox3dF = Engine.Shader()
+    .Header(450)
+    .NewLine()
+    .In(0, "vec3", "vVertUV")
+    .outFragColor()
+    .uSamplerCubeMap(20, "samplerCubeMap")
+    .Push()
+    .Ubo()
+    .Uncharted2Tonemap()
+    .GlslMainBegin()
+    .Indent()
+    .Append([[
+        vec3 Color = texture(samplerCubeMap, vVertUV).rgb;
+          // Tone mapping
+          // 0.5 = exposure
+	Color = Uncharted2Tonemap(Color * 0.5);
+	Color = Color * (1.0f / Uncharted2Tonemap(vec3(11.2f)));	
+	// Gamma correction
+          // 2.2 = gamma
+	Color = pow(Color, vec3(1.0f / 0.3));
+	outFragColor = vec4(Color, 1.0);
+        ]])
+    .GlslMainEnd()
+    .NewLine().str
+
+PBR.PreFilterEnvMapF = Engine.Shader()
+    .Header(450)
+    .NewLine()
+    .In(0, "vec3", "inPos")
+    .Push()
+    .Append [[
+    struct {
+          float roughness;
+          uint numSamples;
+    } consts;
+    consts.roughness = Push.m2[0][0];
+    consts.numSamples = uint(Push.m2[1][0]);
+    ]]
+    .outFragColor()
+    .uSamplerCubeMap(20, "samplerEnv")
+    .Random()
+    .Hammerslay2d()
+    .ImportanceSample_GGX()
+    .D_GGX()
+    .PrefilterEnvMap()
+    .GlslMainBegin()
+    .Append [[
+         	vec3 N = normalize(inPos);
+	outColor = vec4(PrefilterEnvMap(N, consts.roughness), 1.0);
+    ]]
+    .GlslMainEnd()
+    .str
+
+PBR.IBLV = Engine.Shader()
+    .Header(450)
+    .NewLine()
+    .VLayout()
+    .Out(0, "vec2", "vUV")
+    .Out(1, "vec3", "vNormal")
+    .Out(2, "vec3", "vWorldPos")
+    .Ubo()
+    .Push()
+    .GlslMainBegin()
+    .Append [[
+    vec3 locPos = vec3(Push.model * vec4(inPosition, 1.0));
+	vWorldPos = locPos;// + pushConsts.objPos;
+	vNormal = mat3(Push.model) * inNormal;
+	vUV = inUV;
+	vUV.t = 1.0 - inUV.t;
+	gl_Position =  ubo.projection * ubo.view * vec4(vWorldPos, 1.0);
+    ]]
+    .GlslMainEnd()
+    .str
+
+PBR.IBLF = Engine.Shader()
+    .Header(450)
+    .NewLine()
+    .In(0, "vec2", "vUV")
+    .In(1, "vec3", "vNormal")
+    .In(2, "vec3", "vWorldPos")
+    .Ubo()
+    .Push()
+    .Append [[
+struct PushConsts {
+          float roughness;
+          float metallic;
+          float specular;
+          float r;
+          float g;
+          float b;
+} material;
+
+material.roughness = Push.m2[0][0];
+material.metallic = Push.m2[0][1];
+material.specular = Push.m2[0][2];
+material.r = Push.m2[1][0];
+material.g = Push.m2[1][1];
+material.b = Push.m2[1][2];
+    ]]
+    .uSamplerCubeMap(20, "samplerIrradiance")
+    .uSampler2D(3, "samplerBRDFLUT")
+    .uSamplerCubeMap(21, "prefilteredMap")
+    .outFragColor()
+    .PI()
+    .Append "#define ALBEDO vec3(material.r, material.g, material.b);"
+    .NewLine()
+    .Uncharted2Tonemap()
+    .D_GGX()
+    .G_SchlicksmithGGX()
+    .F_SchlickR()
+    .PrefilteredReflection()
+    .SpecularContribution()
+    .GlslMainBegin()
+    .Append [[
+	vec3 N = normalize(inNormal);
+	vec3 V = normalize(ubo.camPos - vWorldPos);
+	vec3 R = reflect(-V, N);
+
+	float metallic = material.metallic;
+	float roughness = material.roughness;
+
+	vec3 F0 = vec3(0.04);
+	F0 = mix(F0, ALBEDO, metallic);
+
+	vec3 Lo = vec3(0.0);
+	for(int i = 0; i < Ubo.lights.length(); i++) {
+		vec3 L = normalize(uboParams.lights[i].xyz - vWorldPos);
+		Lo += specularContribution(L, V, N, F0, metallic, roughness);
+	}
+	
+	vec2 brdf = texture(samplerBRDFLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+	vec3 reflection = prefilteredReflection(R, roughness).rgb;	
+	vec3 irradiance = texture(samplerIrradiance, N).rgb;
+
+	// Diffuse based on irradiance
+	vec3 diffuse = irradiance * ALBEDO;	
+
+	vec3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
+
+	// Specular reflectance
+	vec3 specular = reflection * (F * brdf.x + brdf.y);
+
+	// Ambient part
+	vec3 kD = 1.0 - F;
+	kD *= 1.0 - metallic;	
+	vec3 ambient = (kD * diffuse + specular);
+	
+	vec3 color = ambient + Lo;
+
+	// Tone mapping -- exposure = 0.5
+	color = Uncharted2Tonemap(color * 0.5);
+	color = color * (1.0f / Uncharted2Tonemap(vec3(11.2f)));	
+
+	// Gamma correction gamma = 3.3
+	color = pow(color, vec3(1.0f / 3.3));
+
+	outFragColor = vec4(color, 1.0);
+    ]]
+    .GlslMainEnd()
+    .str
+
+
+PBR.IrradianceCubeF = Engine.Shader()
+    .Header(450)
+    .VLayout()
+    .Ubo()
+    .Push()
+    .Append [[
+    struct {
+          float deltaPhi;
+          float deltaTheta;
+    } consts;
+    consts.deltaPhi = Push.m2[0].x;
+    consts.deltaTheta = Push.m2[0].y;
+    ]]
+    .uSamplerCubeMap(20, "samplerEnv")
+    .PI()
+    .GlslMainBegin()
+    .outFragColor()
+    .Append [[
+	vec3 N = normalize(inPosition);
+	vec3 up = vec3(0.0, 1.0, 0.0);
+	vec3 right = normalize(cross(up, N));
+	up = cross(N, right);
+
+	const float TWO_PI = PI * 2.0;
+	const float HALF_PI = PI * 0.5;
+
+	vec3 color = vec3(0.0);
+	uint sampleCount = 0u;
+	for (float phi = 0.0; phi < TWO_PI; phi += consts.deltaPhi) {
+		for (float theta = 0.0; theta < HALF_PI; theta += consts.deltaTheta) {
+			vec3 tempVec = cos(phi) * right + sin(phi) * up;
+			vec3 sampleVector = cos(theta) * N + sin(theta) * tempVec;
+			color += texture(samplerEnv, sampleVector).rgb * cos(theta) * sin(theta);
+			sampleCount++;
+		}
+	}
+	outFragColor = vec4(PI * color / float(sampleCount), 1.0);
+    ]]
+    .GlslMainEnd()
+    .str
+
+PBR.GenBrdfLutV = Engine.Shader()
+    .Header(450)
+    .Out(0, "vec2", "vUV")
+    .GlslMainBegin()
+    .Append [[
+    	outUV = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
+	gl_Position = vec4(outUV * 2.0f - 1.0f, 0.0f, 1.0f);
+    ]]
+    .GlslMainEnd()
+    .str
+
+PBR.GenBrdfLutF = Engine.Shader()
+    .Header(450)
+    .VLayout()
+    .In(0, "vec2", "vUV")
+    .Append "const uint NUM_SAMPLES = 1024u;"
+    .NewLine()
+    .PI()
+    .Random()
+    .Hammerslay2d()
+    .ImportanceSample_GGX()
+    .G_SchlicksmithGGX()
+    .BRDF()
+    .GlslMainBegin()
+    .Append [[
+        vUV = inUV;
+        outFragColor = vec4(BRDF(vUV.s, vUV.t), 0.0, 1.0);
+    ]]
+    .GlslMainEnd()
+
+
+PBR.FilterCubeV = Engine.Shader()
+    .Header(450)
+    .VLayout()
+    .Push()
+    .Out(0, "vec2", "vUV")
+    .GlslMainBegin()
+    .Append [[
+
+    ]]
+    .GlslMainEnd()
+
+PBR.BasicCompute = Engine.Shader()
+    .Header(450)
+    .GlslMainBegin()
+    .GlslMainEnd().str
