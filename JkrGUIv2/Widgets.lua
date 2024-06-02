@@ -1,4 +1,4 @@
-require "JkrGUIv2.Basic"
+require "JkrGUIv2.require"
 
 local lerp = function(a, b, t)
     return (a * (1 - t) + t * b) * (1 - t) + b * t
@@ -488,7 +488,7 @@ Jkr.CreateWidgetRenderer = function(i, w, e)
 
     o.Draw = function()
         -- Optimize this
-        o.s:BindShapes(w)
+        o.s:BindShapes(w, Jkr.CmdParam.UI)
         for i = 1, #o.c.mDrawables, 1 do
             local drawable = o.c.mDrawables[i]
             o.s:BindFillMode(Jkr.FillType.Image, w, Jkr.CmdParam.UI)

@@ -167,6 +167,7 @@ Spr.Skybox3dV = Engine.Shader()
     .NewLine()
     .GlslMainEnd()
     .NewLine().str
+
 Spr.Skybox3dF = Engine.Shader()
     .Header(450)
     .NewLine()
@@ -408,7 +409,7 @@ Spr.PBRBasic3dFragment = Engine.Shader()
 --[========================================================================================[
     COMPUTE SHADERS (CUSTOM PAINTER)
 --]========================================================================================]
-Spr.RoundedRectangleCShader = Jkrmt.Shader()
+Spr.RoundedRectangleCShader = Engine.Shader()
     .Header(450)
     .CInvocationLayout(1, 1, 1)
     .uImage2D()
@@ -434,7 +435,7 @@ Spr.RoundedRectangleCShader = Jkrmt.Shader()
     .NewLine()
     .str
 
-Spr.AimerCShader = Jkrmt.Shader()
+Spr.AimerCShader = Engine.Shader()
     .Header(450)
     .CInvocationLayout(1, 1, 1)
     .uImage2D()
@@ -460,7 +461,7 @@ Spr.AimerCShader = Jkrmt.Shader()
     .str
 
 
-Spr.MainButtonCShader = Jkrmt.Shader()
+Spr.MainButtonCShader = Engine.Shader()
     .Header(450)
     .CInvocationLayout(1, 1, 1)
     .uImage2D()

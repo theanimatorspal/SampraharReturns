@@ -1,3 +1,4 @@
+require "JkrGUIv2.Widgets"
 Spr.Mechanics = {}
 
 local GravityY = -10.0

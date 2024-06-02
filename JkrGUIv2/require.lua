@@ -1,5 +1,53 @@
+Engine = {}
+Jkrmt = {}
+
 -- True : Will compile and store cachesC-- False: Will load caches instead of compiling the shaders
 local ShouldLoadCaches_b = false
+
+--[============================================================[
+        JKRGUI v2 - ALL RIGHT RESERVED (c)
+
+*userdata - means table in which you cannot insert elements.
+    This is similar to class in C++
+
+*factory function - These are the functions that are prefixed
+    CreateXXXX, that means you are creating an object.
+    *A table is returned by the factory function,
+
+Notes:
+1. All the factory functions that is not in the namespace Jkr,
+    (is local to this file), will return userdata, that is
+    you cannot extend the table. And those which are in the
+    Jkr namespace will return a table which can be extended
+    with your functionality.
+
+
+CODING STANDARDS
+    -- always  for member functions that are not meant to be used
+            use "m" prefix, like mNumber, mComplex
+    -- if the argument type is a table make it plural
+            like inNumbers, inKeyframes etc
+
+
+CREATING A FACTORY (CLASS PRODUCER)
+
+Namespace.CreateCLASSNAME = function(inArgument1, inArgument2)
+    local o = {}
+    o.mArgument1 = inArgument1
+    o.Argument2 = inArgument2
+
+    o.AFunction = function()
+        -- What the function does
+    end
+
+    return o
+end
+
+For Jkr Specific,
+If Supported for Multithreaded use Jkrmt
+If not use Jkr
+
+]============================================================]
 
 --[============================================================[
         DEFAULT RESOURCES
@@ -562,8 +610,8 @@ Jkr.CreateShapeRenderer = function(inInstance, inCompatibleWindow, inShapeRender
     o.Update = function(self, inId, inGenerator, inPosition_3f)
         sr:Update(inId, inGenerator, inPosition_3f.x, inPosition_3f.y, inPosition_3f.z) -- TODO Improve this
     end
-    o.BindShapes = function(self, w)
-        sr:BindShapes(w)
+    o.BindShapes = function(self, w, inCmdParam)
+        sr:BindShapes(w, inCmdParam)
     end
     o.BindFillMode = function(self, inFillMode, inWindow, inCmdParam)
         sr:BindFillMode(inFillMode, inWindow, inCmdParam)
@@ -714,4 +762,20 @@ Jkr.DebugMainLoop = function(w, e, inUpdate, inDispatch, inDraw, inPostProcess, 
         end
         i = i + 1
     end
+end
+
+--[============================================================[
+    SHAPE Renderer 3D
+]============================================================]
+
+function Jkr.CreateShapeRenderer3D(i, w)
+    return Jkr.Shape3D(i, w)
+end
+
+--[============================================================[
+    Simple 3D Pipeline
+]============================================================]
+
+function Jkr.CreateSimple3DPipeline(i, w)
+    return Jkr.Simple3D(i, w)
 end

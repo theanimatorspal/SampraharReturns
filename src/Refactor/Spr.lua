@@ -1,5 +1,6 @@
 require "JkrGUIv2.Engine.Engine"
 require "JkrGUIv2.Engine.Shader"
+
 Spr = {}
 Engine:Load(Validation)
 Spr.w = Jkr.CreateWindow(Engine.i, "Hello", vec2(900, 480), 3)

@@ -20,7 +20,7 @@
           },
           /* EDITOR */
           "editor.matchBrackets": "near",
-          "editor.fontFamily": "Cascadia Code",
+          "editor.fontFamily": "Victor Mono",
           "editor.fontWeight": "normal",
           "editor.fontSize": 18,
           "editor.tabSize": 10,

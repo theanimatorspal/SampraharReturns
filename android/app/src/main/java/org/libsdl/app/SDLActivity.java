@@ -324,7 +324,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         return new SDLSurface(context);
     }
 
-    protected void RunMain() {
+    public void RunMain() {
         // Initialize state
         setContentView(mLayout);
 
