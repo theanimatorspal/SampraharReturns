@@ -1,4 +1,4 @@
-Validation = true
+Validation = false
 LoadShadersFromCache = false
 
 require("src.Refactor.Spr")
